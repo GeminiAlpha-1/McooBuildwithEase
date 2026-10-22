@@ -108,7 +108,10 @@ public final class MinecraftTextureFactory implements TextureFactory {
             // name 留空：这样渲染层会退回 UV 拉伸路径，而不是拿一个不存在的 id 去 blitSprite
             return createTextureSprite(Sheets.GUI_SHEET, null, 16, 16, 0, 0, 256, 256, new SpriteScaling.Stretch());
         }
-        LOGGER.info("GUI sprite {} found via {}: atlas={} u=({}..{}) v=({}..{}) size={}x{}",
+        // 【26.2 修正 · 日志级别】这行以前是 INFO：GUI 精灵每帧要查几十次（每个按钮一次），
+        // 结果把用户的日志刷成几万行、真正的报错反而被淹掉（还拖慢退出时的日志落盘）。
+        // 这种高频诊断一律走 debug（slf4j 在 debug 关闭时不会做字符串格式化）。
+        LOGGER.debug("GUI sprite {} found via {}: atlas={} u=({}..{}) v=({}..{}) size={}x{}",
                 name, how, sprite.atlasLocation(), sprite.getU0(), sprite.getU1(), sprite.getV0(), sprite.getV1(),
                 sprite.contents().width(), sprite.contents().height());
         return createTextureSprite(sprite, name);

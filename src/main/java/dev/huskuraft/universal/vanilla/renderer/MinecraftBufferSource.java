@@ -134,7 +134,7 @@ public class MinecraftBufferSource implements BufferSource {
                 // 所以这里传一个单位矩阵的 PoseStack：顶点保持「已经变换好」的相机相对坐标。
                 if (DEBUG && DEBUG_LOGGED.add(batch.renderType.toString())) {
                     var v = batch.vertices.get(0);
-                    LOGGER.info("[world] layer={} firstVertex=({},{},{}) levelPose={}",
+                    LOGGER.debug("[world] layer={} firstVertex=({},{},{}) levelPose={}",
                             batch.renderType, v.x(), v.y(), v.z(), poseStack.last().pose());
                 }
                 collector.submitCustomGeometry(IDENTITY_POSE, batch.renderType, (pose, consumer) -> replay(batch, consumer));
@@ -238,12 +238,12 @@ public class MinecraftBufferSource implements BufferSource {
             if (colorA == colorB && colorB == colorC && colorC == colorD) {
                 if (isAxisAligned(a, b, c, d)) {
                     if (DEBUG) {
-                        LOGGER.info("[gui] fill rect {} {} {} {} color={}", x1, y1, x2, y2, Integer.toHexString(colorA));
+                        LOGGER.debug("[gui] fill rect {} {} {} {} color={}", x1, y1, x2, y2, Integer.toHexString(colorA));
                     }
                     graphics.fill(x1, y1, x2, y2, colorA);
                 } else {
                     if (DEBUG) {
-                        LOGGER.info("[gui] drawQuad a=({},{}) b=({},{}) c=({},{}) d=({},{}) color={}",
+                        LOGGER.debug("[gui] drawQuad a=({},{}) b=({},{}) c=({},{}) d=({},{}) color={}",
                                 a.x(), a.y(), b.x(), b.y(), c.x(), c.y(), d.x(), d.y(), Integer.toHexString(colorA));
                     }
                     drawQuad(a, b, c, d, colorA);

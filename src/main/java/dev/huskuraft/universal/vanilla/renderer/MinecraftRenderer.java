@@ -251,7 +251,7 @@ public class MinecraftRenderer extends Renderer {
             flushPending();
             var position = transformGui(x, y);
             if (MinecraftBufferSource.DEBUG) {
-                LOGGER.info("[gui] text '{}' at ({},{}) color={} styleColor={} scissor={}", component.getString(),
+                LOGGER.debug("[gui] text '{}' at ({},{}) color={} styleColor={} scissor={}", component.getString(),
                         position[0], position[1], Integer.toHexString(opaque),
                         component.getStyle().getColor() == null ? "null" : Integer.toHexString(component.getStyle().getColor().getValue()),
                         lastScissor == null ? "none" : Arrays.toString(lastScissor));
