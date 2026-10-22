@@ -49,7 +49,11 @@ public final class MinecraftTextureFactory implements TextureFactory {
 
     @Override
     public TextureSprite getDemoBackgroundTextureSprite() {
-        return createTextureSprite(Identifier.withDefaultNamespace("textures/gui/demo_background.png"), null, 248, 166, 0, 0, 256, 256, new SpriteScaling.NineSlice(248, 166, 6));
+        // 26.2 里 vanilla 已经删掉了 "textures/gui/demo_background.png"（老版本用来做面板底纹的那张图），
+        // 直接沿用旧路径会画成洋红色的「缺失纹理」。
+        // 这里改用本 mod 自己的 16x16 纯白贴图拉伸成面板底色。
+        return createTextureSprite(Identifier.fromNamespaceAndPath("mcoo_build_with_ease", "textures/misc/blank.png"),
+                null, 16, 16, 0, 0, 16, 16, new SpriteScaling.Stretch());
     }
 
     public TextureSprite createTextureSprite(Identifier texture, Identifier name, int width, int height, int x, int y, int textureWidth, int textureHeight, SpriteScaling scaling) {
@@ -66,26 +70,47 @@ public final class MinecraftTextureFactory implements TextureFactory {
     public TextureSprite createTextureSprite(Identifier name) {
         var atlasManager = Minecraft.getInstance().getAtlasManager();
         TextureAtlasSprite sprite = null;
+        var how = "";
         try {
-            sprite = atlasManager.get(new SpriteId(Sheets.GUI_SHEET, name));
-        } catch (Throwable ignored) {
+            // 路径 1：按图集纹理位置查（Sheets.GUI_SHEET = textures/atlas/gui.png）
+            var atlas = atlasManager.getAtlasOrThrow(Sheets.GUI_SHEET);
+            sprite = atlas.getSprite(name);
+            how = "atlas-by-texture";
+        } catch (Throwable throwable) {
+            LOGGER.debug("GUI atlas lookup by texture failed for {}: {}", name, throwable.toString());
         }
         if (sprite == null) {
             try {
+                // 路径 2：按精灵定义目录查（textures/gui/sprites）
                 sprite = atlasManager.get(new SpriteId(GUI_SPRITES_DIRECTORY, name));
-            } catch (Throwable ignored) {
+                how = "sprite-id-by-directory";
+            } catch (Throwable throwable) {
+                LOGGER.debug("GUI sprite lookup by directory failed for {}: {}", name, throwable.toString());
+            }
+        }
+        if (sprite == null) {
+            try {
+                // 路径 3：按图集纹理位置 + SpriteId
+                sprite = atlasManager.get(new SpriteId(Sheets.GUI_SHEET, name));
+                how = "sprite-id-by-texture";
+            } catch (Throwable throwable) {
+                LOGGER.debug("GUI sprite lookup by texture id failed for {}: {}", name, throwable.toString());
             }
         }
         if (sprite == null) {
             LOGGER.warn("GUI sprite not found: {}", name);
             return createTextureSprite(Sheets.GUI_SHEET, name, 16, 16, 0, 0, 256, 256, new SpriteScaling.Stretch());
         }
+        LOGGER.info("GUI sprite {} found via {}: atlas={} u=({}..{}) v=({}..{}) size={}x{}",
+                name, how, sprite.atlasLocation(), sprite.getU0(), sprite.getU1(), sprite.getV0(), sprite.getV1(),
+                sprite.contents().width(), sprite.contents().height());
         return createTextureSprite(sprite);
     }
 
     public TextureSprite createTextureSprite(TextureAtlasSprite sprite) {
         return new SimpleTextureSprite(
-                new MinecraftResourceLocation(Sheets.GUI_SHEET),
+                // 26.2 的 TextureAtlasSprite 自带 atlasLocation()，用它比写死 GUI_SHEET 可靠
+                new MinecraftResourceLocation(sprite.atlasLocation()),
                 new MinecraftResourceLocation(sprite.contents().name()),
                 sprite.contents().width(),
                 sprite.contents().height(),

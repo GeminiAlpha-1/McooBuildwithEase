@@ -74,12 +74,13 @@ public class MinecraftRenderer extends Renderer {
         this.collector = null;
         this.poseStack = null;
         this.cameraRenderState = null;
-        // 【关键】直接复用 GuiGraphicsExtractor 自己的 2D 矩阵。
-        // 1.21.3 的做法是 new MinecraftRenderer(guiGraphics.pose()) —— 用的是同一个 pose 对象；
-        // 26.2 里如果自建一个独立矩阵再手工变换坐标，缩放就会被应用两次
-        // （一次是我们矩阵里的面板动画缩放，一次是 extractor 绘制时自己应用的 pose），
-        // 结果就是整个界面被放大、轮盘按钮全挤在一起。
-        this.matrix2d = graphics.pose();
+        // 26.2 的 GUI 有两套绘制路径，矩阵必须**只**由我们这一侧统一施加一次：
+        //  - 文字 / 物品 / tooltip：GuiGraphicsExtractor 自己会应用它内部的 pose，
+        //    所以这里不能把我们的 2D 矩阵塞进它的 pose（否则矩形路径会重复应用），
+        //    只能在 transformGui 里按我们的矩阵手工变换坐标。
+        //  - 矩形 / 四边形 / 贴图：common-api 会把矩阵烘焙进顶点，
+        //    再由 GuiGraphicsExtractor.blit 贴出来，同样只应用一次。
+        this.matrix2d = MinecraftMatrixStack.createMatrix2d();
         this.matrixStack = new MinecraftMatrixStack(matrix2d);
         this.bufferSource = new MinecraftBufferSource(graphics, tint);
     }
@@ -165,6 +166,45 @@ public class MinecraftRenderer extends Renderer {
         bufferSource.end();
     }
 
+    /**
+     * GUI 侧的精灵绘制。
+     * <p>
+     * 【26.2 修正】26.2 的 vanilla GUI 精灵改成了**九宫格**：例如按钮精灵
+     * {@code minecraft:widget/button} 在图集里是 200x20 的带边框贴图，
+     * 直接按 UV 拉伸会把中间部分糊成条纹（原版用 {@code blitSprite} 按九宫格规则切）。
+     * <p>
+     * 26.2 提供了原生 {@code GuiGraphicsExtractor#blitSprite(RenderPipeline, TextureAtlasSprite, ...)}，
+     * 对图集精灵直接用它即可；非图集纹理（本 mod 自己的图标、面板底色）仍走原来的拉伸路径。
+     */
+    @Override
+    public void renderSprite(dev.huskuraft.universal.api.texture.TextureSprite sprite, int x, int y, int width, int height) {
+        if (graphics != null) {
+            var vanillaSprite = findVanillaSprite(sprite);
+            if (vanillaSprite != null) {
+                var position = transformGui(x, y);
+                graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI, vanillaSprite,
+                        position[0], position[1], position[0] + width, position[1] + height);
+                return;
+            }
+        }
+        super.renderSprite(sprite, x, y, width, height);
+    }
+
+    /**
+     * 把 common-api 的 {@link dev.huskuraft.universal.api.texture.TextureSprite} 对应到 26.2 的
+     * {@link net.minecraft.client.renderer.texture.TextureAtlasSprite}。
+     * 只有「来自图集」的精灵才有对应物；普通贴图返回 null。
+     */
+    private net.minecraft.client.renderer.texture.TextureAtlasSprite findVanillaSprite(dev.huskuraft.universal.api.texture.TextureSprite sprite) {
+        try {
+            var atlasManager = Minecraft.getInstance().getAtlasManager();
+            var atlas = atlasManager.getAtlasOrThrow((net.minecraft.resources.Identifier) sprite.texture().reference());
+            return atlas.getSprite((net.minecraft.resources.Identifier) sprite.name().reference());
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
     @Override
     protected int renderTextInternal(Typeface typeface, Text text, int x, int y, int color, int backgroundColor, boolean shadow, boolean seeThrough, int lightMap) {
         var font = (Font) typeface.reference();
@@ -243,16 +283,22 @@ public class MinecraftRenderer extends Renderer {
     }
 
     /**
-     * GUI 模式下的坐标变换。
+     * GUI 模式下把 common-api 的逻辑坐标按当前 2D 矩阵变换一次。
      * <p>
-     * 【26.2 修正】以前这里会按我们自己的 2D 矩阵手工变换一次坐标，
-     * 但 {@code GuiGraphicsExtractor} 的绘制方法自己就会应用它内部的 pose，
-     * 于是缩放被应用了两次（界面整体变大、轮盘按钮挤成一团）。
-     * 现在 2D 矩阵就是 extractor 的 pose 本身，绘制时由 extractor 统一应用，
-     * 所以这里**必须原样返回逻辑坐标**。
+     * 文字 / 物品 / tooltip 这一侧不能把矩阵塞进 {@code GuiGraphicsExtractor} 的 pose
+     * （矩形那一侧 common-api 已经把矩阵烘焙进顶点了，再让 extractor 应用一次就会重复），
+     * 所以这里手工变换一次，保证两条路径都只应用一次矩阵。
      */
     private int[] transformGui(int x, int y) {
-        return new int[]{x, y};
+        if (matrix2d == null) {
+            return new int[]{x, y};
+        }
+        // JOML 的 Matrix3x2f 是列主序：x' = m00*x + m10*y + m20，y' = m01*x + m11*y + m21
+        var fx = (float) x;
+        var fy = (float) y;
+        var nx = matrix2d.m00() * fx + matrix2d.m10() * fy + matrix2d.m20();
+        var ny = matrix2d.m01() * fx + matrix2d.m11() * fy + matrix2d.m21();
+        return new int[]{Math.round(nx), Math.round(ny)};
     }
 
 }
