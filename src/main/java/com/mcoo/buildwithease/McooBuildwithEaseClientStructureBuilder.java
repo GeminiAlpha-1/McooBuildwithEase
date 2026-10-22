@@ -62,7 +62,7 @@ import com.mcoo.buildwithease.networking.packets.player.PlayerBuildPacket;
 import com.mcoo.buildwithease.networking.packets.player.PlayerCommandPacket;
 import com.mcoo.buildwithease.renderer.opertaion.children.BlockOperationRenderer;
 import com.mcoo.buildwithease.renderer.outliner.OutlineRenderLayers;
-import com.mcoo.buildwithease.screen.wheel.AbstractWheelScreen;
+import com.mcoo.buildwithease.screen.grid.AbstractGridScreen;
 import com.mcoo.buildwithease.session.config.ConstraintConfig;
 import com.mcoo.buildwithease.session.config.SessionConfig;
 
@@ -727,12 +727,12 @@ public final class McooBuildwithEaseClientStructureBuilder extends StructureBuil
 
         var texts = new ArrayList<Tuple2<Text, Text>>();
         texts.add(new Tuple2<>(Text.translate("mcoo_build_with_ease.build.summary.structure").withStyle(ChatFormatting.WHITE), context.buildMode().getDisplayName().withStyle(ChatFormatting.GOLD)));
-        texts.add(new Tuple2<>(AbstractWheelScreen.button(context.replaceStrategy()).getCategory().withStyle(ChatFormatting.WHITE), AbstractWheelScreen.button(context.replaceStrategy()).getName().withStyle(ChatFormatting.GOLD)));
+        texts.add(new Tuple2<>(AbstractGridScreen.button(context.replaceStrategy()).getCategory().withStyle(ChatFormatting.WHITE), AbstractGridScreen.button(context.replaceStrategy()).getName().withStyle(ChatFormatting.GOLD)));
 
         for (var supportedFeature : context.structure().getSupportedFeatures()) {
             var option = context.buildFeatures().stream().filter(feature -> Objects.equals(feature.getCategory(), supportedFeature.getName())).findFirst();
             if (option.isEmpty()) continue;
-            var button = AbstractWheelScreen.button(option.get());
+            var button = AbstractGridScreen.button(option.get());
             texts.add(new Tuple2<>(button.getCategory().withStyle(ChatFormatting.WHITE), button.getName().withStyle(ChatFormatting.GOLD)));
         }
         if (context.pattern().enabled()) {

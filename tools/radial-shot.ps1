@@ -27,7 +27,9 @@ public class Win3 {
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);
     [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint d, IntPtr e);
     public const uint KEYUP = 0x0002;
+    public const uint MOVE = 0x0001;
 }
 "@
 
@@ -106,8 +108,9 @@ Write-Host ("window: " + $proc.MainWindowTitle)
 [Win3]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null
 Start-Sleep -Seconds 2
 
-# 把鼠标悬停到环顶那个槽位上：悬停态的底色是亮灰（0.36,0.36,0.36,0.64），
-# 能直观看出「扇形四边形」到底画出来没有。
+# 把鼠标悬停到方阵第 2 行第 1 个格子（CUBOID）上：悬停态底色会变亮，
+# 还能看到格子的 tooltip，能直观看出「方块按钮 + 底部色条」画出来没有。
+# 方阵：5 列、格子边长 28、间距 4 → 步距 32；整片宽 5*28+4*4 = 156、高 3*32+2*4 = 104，居中
 $client = New-Object Win3+RECT
 [Win3]::GetClientRect($proc.MainWindowHandle, [ref]$client) | Out-Null
 $origin = New-Object Win3+POINT
@@ -117,9 +120,27 @@ $origin.Y = 0
 $cw = $client.Right - $client.Left
 $ch = $client.Bottom - $client.Top
 Write-Host ("client area: ${cw}x${ch} at $($origin.X),$($origin.Y)")
-$hoverX = $origin.X + [int]($cw / 2)
-$hoverY = $origin.Y + [int]($ch / 2) - 102   # 槽位半径 51 逻辑像素 * guiScale 2
+$guiScale = [Math]::Max(1, [Math]::Min([Math]::Floor($cw / 320), [Math]::Floor($ch / 240)))
+$guiW = $cw / $guiScale
+$guiH = $ch / $guiScale
+$gridWidth = 5 * 28 + 4 * 4
+$gridHeight = 3 * 32 + 2 * 4
+$startX = ($guiW - $gridWidth) / 2
+$startY = ($guiH - $gridHeight) / 2
+$hoverX = $origin.X + [int](($startX + 14) * $guiScale)
+$hoverY = $origin.Y + [int](($startY + 32 + 14) * $guiScale)
+
+# 原版在「界面打开」时会在右上角画一条「Move with W,A,S,D」提示（任何界面都有，不是我们画的），
+# 所以悬停点挑左下那格，别被它挡住。
+$hoverX = $origin.X + [int](($startX + 14) * $guiScale)
+$hoverY = $origin.Y + [int](($startY + 32 + 14) * $guiScale)
+
 [Win3]::SetCursorPos($hoverX, $hoverY) | Out-Null
+# 只 SetCursorPos 的话游戏可能收不到鼠标移动事件（悬停色变了但 tooltip 不出），
+# 补一个 1 像素的相对移动，逼出一个真实事件。
+[Win3]::mouse_event([Win3]::MOVE, 1, 0, 0, [IntPtr]::Zero)
+Start-Sleep -Milliseconds 200
+[Win3]::mouse_event([Win3]::MOVE, -1, 0, 0, [IntPtr]::Zero)
 Write-Host "hover at $hoverX,$hoverY"
 
 Write-Host "settling..."

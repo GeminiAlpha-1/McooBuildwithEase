@@ -460,7 +460,7 @@
   "mcoo_build_with_ease.transformer.template_select.title": "Transformatorvorlage auswählen",
   "mcoo_build_with_ease.transformer.template_select.use_template": "Vorlage verwenden",
   "mcoo_build_with_ease.transformer_presets.title": "Transformation Voreinstellungen",
-  "key.mcoo_build_with_ease.build_mode_radial.desc": "Baumodus Radial anzeigen",
+  "key.mcoo_build_with_ease.build_mode_radial.desc": "Baumodus-Raster anzeigen",
   "key.mcoo_build_with_ease.build_mode_settings.desc": "Baumodus Einstellungen öffnen",
   "key.category.mcoo_build_with_ease.default": "McooBuildwithEase",
   "key.mcoo_build_with_ease.control.desc": "Control",

@@ -28,10 +28,11 @@ jar 位置：`D:\WorkSpace\Effortless Structure\mcoo-buildwith-ease\build\libs\M
 
 - [ ] 带 mod 的客户端能进服
 - [ ] 控制台无异常
-- [ ] 按一下 `左 Alt` → 弹出**建造模式径向菜单**（这是主入口，按键/UI 都对说明客户端渲染与 GUI 迁移成功）
+- [ ] 按一下 `左 Alt` → 弹出**建造模式方阵菜单**（这是主入口，按键/UI 都对说明客户端渲染与 GUI 迁移成功）
 - [ ] 再按一下 `左 Alt` → 菜单关闭（**26.0.0 改成了切换式**：上游 1.21.3 是「按住显示、松开关闭」）
 - [ ] 菜单里能切建造模式、撤销/重做、替换、设置、图案、剪贴板
 - [ ] 选中一个建造模式 → 菜单自动关闭
+- [ ] 当前生效的模式有白边标记，悬停某个格子会出名字提示
 
 ## 3. 建造功能逐项验证
 
@@ -76,12 +77,12 @@ jar 位置：`D:\WorkSpace\Effortless Structure\mcoo-buildwith-ease\build\libs\M
 ### 4.1 双后端（Vulkan 是 26.2 的重点）
 
 > 2026-10-22 已用 `run/options.txt` 的 `preferredGraphicsBackend` 各跑一遍（RTX 3060）：
-> 径向菜单、剪贴板界面、世界侧选区框、破坏回归全部正常，两个后端渲染一致、无报错。
+> 建造模式菜单、剪贴板界面、世界侧选区框、破坏回归全部正常，两个后端渲染一致、无报错。
 
 - [x] `Prefer Vulkan`：启动 → 进服 → 建造预览正常（**这是未来默认，重点测**）
 - [x] `Prefer OpenGL`：同样正常（**不能因为走了 Vulkan 就把 OpenGL 弄坏**）
 - [x] 确认实际运行的是哪个后端（用客户端日志的 `Using graphics backend ...` 那行，比 F3 更直接）
-- [x] Vulkan 下过了一遍径向菜单 / 设置页（2D 界面在新后端下也正常）
+- [x] Vulkan 下过了一遍建造模式菜单 / 设置页（2D 界面在新后端下也正常）
 
 > 已知的能力取舍（26.2 没有 1.21.3 那套 RenderState 体系，本移植按「零自定义着色器 + vanilla 管线」实现）：
 > 预览方块不贴自定义纹理时退化为纯色；部分图层映射到最接近的 vanilla 管线，**纹理可能与 1.21.3 略有差异**。
@@ -91,7 +92,7 @@ jar 位置：`D:\WorkSpace\Effortless Structure\mcoo-buildwith-ease\build\libs\M
 
 - [x] 装了 **Axiom** 的客户端：我们的建造模式**不受影响**
   （2026-10-22 用 `tools/behavior-test.ps1` 验过：装 Axiom 6.1.3 后，
-  径向菜单点击切模式、按住左键连续破坏、松开不自动破坏，判定通过）
+  方阵菜单点击切模式、按住左键连续破坏、松开不自动破坏，判定通过）
 - [ ] 装了 Axiom 的客户端：**Axiom 自己的拉选区**也正常（自动化点不到它的快捷键，要真人试）
 - [ ] **WorldEdit** 正常；我们的建造不与 WorldEdit 的选区冲突
 - [ ] **Carpet** 规则正常生效

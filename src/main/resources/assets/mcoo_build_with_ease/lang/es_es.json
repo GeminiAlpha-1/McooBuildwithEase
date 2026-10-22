@@ -460,7 +460,7 @@
   "mcoo_build_with_ease.transformer.template_select.title": "Seleccionar Plantilla de Transformador",
   "mcoo_build_with_ease.transformer.template_select.use_template": "Usar Plantilla",
   "mcoo_build_with_ease.transformer_presets.title": "Preajustes de Transformador",
-  "key.mcoo_build_with_ease.build_mode_radial.desc": "Mostrar radial del modo de construcción",
+  "key.mcoo_build_with_ease.build_mode_radial.desc": "Mostrar la cuadrícula del modo de construcción",
   "key.mcoo_build_with_ease.build_mode_settings.desc": "Abrir configuración del modo de construcción",
   "key.category.mcoo_build_with_ease.default": "McooBuildwithEase",
   "key.mcoo_build_with_ease.control.desc": "Control",

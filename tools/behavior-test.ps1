@@ -196,14 +196,25 @@ $guiW = [int]($cw / $guiScale)
 $guiH = [int]($ch / $guiScale)
 Write-Host ("client ${cw}x${ch} guiScale=$guiScale gui=${guiW}x${guiH}")
 
-$modeCount = 14
-$rad = 2 * [Math]::PI / $modeCount
-$angle = $Slot * $rad - [Math]::PI / 2
-$sx = $guiW / 2 + 51.25 * [Math]::Cos($angle)
-$sy = $guiH / 2 + 51.25 * [Math]::Sin($angle)
+# 建造模式现在是**方阵**（5 列），不再是轮盘：
+#   格子边长 28、底部色条 4、格子间距 4 → 格子步距 32
+#   整片方阵宽 5*28+4*4 = 156、高 3*32+2*4 = 104，居中放在界面正中
+$gridColumns = 5
+$cellSize = 28
+$cellBar = 4
+$cellGap = 4
+$pitch = $cellSize + $cellBar + $cellGap
+$gridWidth = $gridColumns * $cellSize + ($gridColumns - 1) * $cellGap
+$gridHeight = 3 * $pitch + 2 * $cellGap
+$startX = [int](($guiW - $gridWidth) / 2)
+$startY = [int](($guiH - $gridHeight) / 2)
+$col = $Slot % $gridColumns
+$row = [Math]::Floor($Slot / $gridColumns)
+$sx = $startX + $col * ($cellSize + $cellGap) + $cellSize / 2
+$sy = $startY + $row * $pitch + $cellSize / 2
 $slotX = $origin.X + [int]($sx * $guiScale)
 $slotY = $origin.Y + [int]($sy * $guiScale)
-Write-Host ("slot $Slot at $slotX,$slotY")
+Write-Host ("slot $Slot at $slotX,$slotY (grid $col,$row)")
 
 # 按一下左 Alt 打开轮盘
 [Win2]::keybd_event(0xA4, 0, 0, [IntPtr]::Zero)

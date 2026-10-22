@@ -26,9 +26,9 @@ import com.mcoo.buildwithease.building.structure.builder.Structure;
 import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseClipboardScreen;
 import com.mcoo.buildwithease.screen.pattern.McooBuildwithEasePatternScreen;
 import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSettingsScreen;
-import com.mcoo.buildwithease.screen.wheel.AbstractWheelScreen;
+import com.mcoo.buildwithease.screen.grid.AbstractGridScreen;
 
-public class McooBuildwithEaseStructureScreen extends AbstractWheelScreen<Structure, Option> {
+public class McooBuildwithEaseStructureScreen extends AbstractGridScreen<Structure, Option> {
 
     private static final Button<Option> UNDO_OPTION = button(UndoRedo.UNDO);
     private static final Button<Option> REDO_OPTION = button(UndoRedo.REDO);
@@ -158,14 +158,14 @@ public class McooBuildwithEaseStructureScreen extends AbstractWheelScreen<Struct
     public void onCreate() {
         super.onCreate();
 
-        setRadialSelectResponder((slot, click) -> {
+        setSlotSelectResponder((slot, click) -> {
             setScaleAnimation(3f);
             getEntrance().getStructureBuilder().setStructure(getPlayer(), slot.getContent());
             // 【交互变更】轮盘改成切换式之后没有「松开按键」这个关闭时机了，
             // 选中建造模式就直接关掉（上游是靠松键关闭的）。
             close();
         });
-        setRadialOptionSelectResponder((entry, click) -> {
+        setOptionSelectResponder((entry, click) -> {
             setScaleAnimation(3f);
             if (entry.getContent() instanceof Misc misc) {
                 switch (misc) {
@@ -263,7 +263,7 @@ public class McooBuildwithEaseStructureScreen extends AbstractWheelScreen<Struct
     public void onReload() {
         passiveModeTextWidget.setVisible(getEntrance().getConfigStorage().get().builderConfig().passiveMode());
 
-        setRadialSlots(getEntrance().getConfigStorage().get().structureMap().values().stream().map(McooBuildwithEaseStructureScreen::slot).toList());
+        setSlots(getEntrance().getConfigStorage().get().structureMap().values().stream().map(McooBuildwithEaseStructureScreen::slot).toList());
 
         var structure = getEntrance().getStructureBuilder().getContext(getPlayer()).structure();
 //        var structure = getEntrance().getStructureBuilder().getContext(getPlayer()).structure();

@@ -460,7 +460,7 @@
   "mcoo_build_with_ease.transformer.template_select.title": "Select Transformer Template",
   "mcoo_build_with_ease.transformer.template_select.use_template": "Use Template",
   "mcoo_build_with_ease.transformer_presets.title": "Transformer Presets",
-  "key.mcoo_build_with_ease.build_mode_radial.desc": "Show Build Mode Radial",
+  "key.mcoo_build_with_ease.build_mode_radial.desc": "Show Build Mode Grid",
   "key.mcoo_build_with_ease.build_mode_settings.desc": "Open Build Mode Settings",
   "key.category.mcoo_build_with_ease.default": "McooBuildwithEase",
   "key.mcoo_build_with_ease.control.desc": "Control",

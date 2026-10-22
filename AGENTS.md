@@ -32,7 +32,7 @@ dev.huskuraft.universal.fabric/**    Fabric 适配层：事件 / mixin / network
 | loader_version | 0.19.3 | **必须与服务器一致** |
 | fabric_api_version | 0.153.0+26.2 | **必须与服务器一致** |
 | loom_version | 1.18-SNAPSHOT | |
-| mod_version | 26.1.1+26.2 | 规则见下面「版本号规则」 |
+| mod_version | 26.1.2+26.2 | 规则见下面「版本号规则」 |
 
 ⚠️ 编译版本必须 ≤ 服务器版本：用更新的 Fabric API 编译会引入服务器没有的类/方法 → 运行时 `NoSuchMethodError`。
 
@@ -98,8 +98,8 @@ $env:GRADLE_USER_HOME="D:\WorkSpace\McooServerFeatures\.gradle-home"   # 共享�
 | `self-test.ps1` | 构建 → 装 jar → 起服 → 抓日志 |
 | `e2e-test.ps1` | 起服 + 客户端 quickPlay 连服 → 检查双方日志 |
 | `gui-verify.ps1` | 起服 + 客户端自动打开指定界面（`-PmcDebugScreen=settings`）→ 截图；`-Click "dx,dy;dx,dy"` 连点（相对屏幕中心的逻辑像素）、`-Keys "ctrl+a"` 发按键 |
-| `radial-shot.ps1` | 抓径向菜单截图（会自动把鼠标悬停到某个槽位上） |
-| `behavior-test.ps1` | **自动破坏回归测试**：俯视地面 → 按左 Alt 开轮盘 → 点第二个槽位切到 Single → 按住左键 → 松开，判定「按住能破坏、松开不再自动破坏」 |
+| `radial-shot.ps1` | 抓建造模式方阵菜单截图（会自动把鼠标悬停到某个格子上） |
+| `behavior-test.ps1` | **自动破坏回归测试**：俯视地面 → 按左 Alt 开菜单 → 点第 2 个格子切到 Single → 按住左键 → 松开，判定「按住能破坏、松开不再自动破坏」 |
 | `vanilla-test.ps1` | **服务端独占验收**：用启动器里的**官方客户端 jar**直接起一个纯净客户端（不走 Fabric Loader，所以 mod 一概不加载）→ `--quickPlayMultiplayer` 连测试服 → 判定原版客户端能不能进服 |
 | `screenshot.ps1` | 用 PrintWindow 抓 Minecraft 窗口 |
 
@@ -156,7 +156,7 @@ Axiom 是**世界编辑**模组，它会拦截客户端鼠标做选区，和我�
 所以**每次改 mixin 都要带着 Axiom 一起跑**。
 
 联调步骤：`tools/behavior-test.ps1`（把 Axiom 放进 `run/mods/` 再跑）——
-它会点开径向菜单切模式、按住左键破坏方块，正好覆盖 Axiom 抢鼠标的那条路径。
+它会点开建造模式菜单切模式、按住左键破坏方块，正好覆盖 Axiom 抢鼠标的那条路径。
 
 ⚠️ **dev 环境的 mixinextras 版本**：
 Loom 的 dev 客户端默认塞 mixinextras **0.5.4**，而真实服务器（Fabric API 自带）是 **0.5.5**。
@@ -205,18 +205,23 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
 （`Font$PreparedTextBuilder#getTextColor`：alpha 取自传入色，rgb 取自 `style.getColor()`）。
 
 1.21.3 的字体 alpha 是独立字段，调用方习惯直接传 RGB（`0xFFFFFF` / `0x404040`）；
-照搬到 26.2 会因为 alpha=0 让整段文字隐形（面板标题、轮盘标签都是这样没的）。
+照搬到 26.2 会因为 alpha=0 让整段文字隐形（面板标题、菜单标签都是这样没的）。
 → 渲染层统一给文字颜色补 `| 0xFF000000`。
 
 ### 6.5 GUI 没有多边形填充：任意四边形要自己提交 GUI 元素
 
 26.2 的 `GuiGraphicsExtractor` 只剩轴对齐矩形 + 贴图 blit，**没有多边形填充**；
-1.21.3 靠 `MultiBufferSource` 直接画四边形（轮盘菜单的扇形就靠它）。
+1.21.3 靠 `MultiBufferSource` 直接画四边形。
 
 **仿射近似是错的**：`fill` 会把 `pose()` 应用到矩形四角，于是「单位矩形 + 2D 仿射矩阵」= **平行四边形**。
-轮盘的扇形是**梯形**（内外两条弦不等长），仿射变换做不出来，只能再按双线性插值切小块近似 ——
+扇形是**梯形**（内外两条弦不等长），仿射变换做不出来，只能再按双线性插值切小块近似 ——
 但每块的对角点仍有误差（4×4 切分时约 0.9 逻辑像素），
 **相邻小块的共享边因此错开** → 扇形上出现一道道细划痕、彩色分段上出现黑点。
+
+> 建造模式菜单已经**从轮盘改成方阵**（`screen/grid/AbstractGridScreen`）——
+> 方阵是轴对齐矩形，画得准、没有锯齿，点选目标也大。
+> 下面这条「自己提交 GUI 元素」的路子现在只剩**图案界面那个小环形图标选择器**在用
+> （`screen/pattern/RadialTextIcon`），别再拿它去画新的扇形 UI。
 
 **正确做法**（`MinecraftBufferSource#drawQuad` → `QuadRenderState`）：
 自己实现 `GuiElementRenderState`，把四边形按**三角形带**发进 GUI 渲染状态：
@@ -338,7 +343,7 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
 - **不自带自定义着色器**，一律用 vanilla 现成管线（`RenderTypes.OUTLINE` / `LINES` / `SECONDARY_BLOCK_OUTLINE`）+
   顶点色 —— 这样 OpenGL 与 Vulkan 两个后端都自动可用，Vulkan 零风险。
 - **双后端已实测通过**（2026-10-22，RTX 3060）：
-  OpenGL 与 Vulkan 各跑了一遍径向菜单、剪贴板界面、世界侧选区框、破坏回归，渲染一致、无报错。
+  OpenGL 与 Vulkan 各跑了一遍建造模式菜单、剪贴板界面、世界侧选区框、破坏回归，渲染一致、无报错。
   切后端的方法：改 `run/options.txt` 的 `preferredGraphicsBackend:"vulkan"`（可选 `default` / `opengl` / `vulkan`）。
   ⚠️ **写 options.txt 绝对不能带 BOM**（PowerShell 5.1 的 `Set-Content -Encoding UTF8` 会带）：
   MC 会打一行 `Failed to load options` 然后**把整个配置丢回默认值** —— 后端会悄悄退回 OpenGL，

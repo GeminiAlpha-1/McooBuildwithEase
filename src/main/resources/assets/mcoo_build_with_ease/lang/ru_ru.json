@@ -460,7 +460,7 @@
   "mcoo_build_with_ease.transformer.template_select.title": "Выбрать шаблон трансформера",
   "mcoo_build_with_ease.transformer.template_select.use_template": "Использовать шаблон",
   "mcoo_build_with_ease.transformer_presets.title": "Пресеты трансформера",
-  "key.mcoo_build_with_ease.build_mode_radial.desc": "Показать радиальное меню режима строительства",
+  "key.mcoo_build_with_ease.build_mode_radial.desc": "Показать сетку режима строительства",
   "key.mcoo_build_with_ease.build_mode_settings.desc": "Открыть настройки режима строительства",
   "key.category.mcoo_build_with_ease.default": "McooBuildwithEase",
   "key.mcoo_build_with_ease.control.desc": "Control",
