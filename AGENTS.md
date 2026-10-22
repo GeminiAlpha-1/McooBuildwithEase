@@ -393,3 +393,14 @@ Path export(String name, int sizeX, int sizeY, int sizeZ, List<Block> blocks, Fo
   索引顺序 `x + z*sizeX + y*sizeX*sizeZ`。
 - `.schem`（Sponge Schematic v3）：`Palette` 是「方块状态字符串 → 序号」的复合标签，
   `Data` 是 varint 编码的序号流，顺序 `y → z → x`。
+
+### 10.3 导出要走「游戏内文件管理器」，不直接落盘
+
+下载的流程是「选格式 → 进 `McooBuildwithEaseSaveFileScreen` → 玩家自己挑目录、自己点保存」：
+默认目录按格式分（`mcoo_build_with_ease_exports/` / `Axiom/blueprints/`），
+但玩家可以存到任意路径去分享给别人。
+
+**为什么不用系统原生的保存对话框**：MC 26.2 没有原生文件选择器，
+自己引 AWT 的 `FileDialog` 在 GLFW/Vulkan 客户端里容易和焦点/GL 上下文打架。
+**为什么没抄 Litematica 的**：Litematica 是 GPLv3，本项目是 LGPLv3，直接抄会把整个 mod 逼成 GPLv3 ——
+这是许可证层面的决定，得项目所有者拍板，不能顺手就抄。

@@ -10,13 +10,13 @@ import dev.huskuraft.universal.api.gui.AbstractPanelScreen;
 import dev.huskuraft.universal.api.gui.button.Button;
 import dev.huskuraft.universal.api.gui.text.TextWidget;
 import dev.huskuraft.universal.api.platform.Entrance;
-import dev.huskuraft.universal.api.platform.PlatformLoader;
 import dev.huskuraft.universal.api.text.Text;
 
 /**
- * 把剪贴板里的结构导出成工程文件。
+ * 选一种格式导出剪贴板里的结构。
  * <p>
- * 原先的「分享」（发给别的玩家）和「编辑」（上游就是空实现）合并成了这一个「下载」。
+ * 选完格式会进 {@link McooBuildwithEaseSaveFileScreen}（游戏内文件管理器），
+ * 由玩家自己挑位置、自己点保存 —— 默认落在该格式对应的目录，但想存到任意路径分享给别人也完全可以。
  */
 public class McooBuildwithEaseClipboardDownloadScreen extends AbstractPanelScreen {
 
@@ -40,17 +40,17 @@ public class McooBuildwithEaseClipboardDownloadScreen extends AbstractPanelScree
 
         addWidget(Button.builder(getEntrance(),
                 Text.translate("mcoo_build_with_ease.clipboard.download.litematic"), button -> {
-                    export(StructureExporter.Format.LITEMATIC);
+                    openSaveScreen(StructureExporter.Format.LITEMATIC);
                 }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 3f, 0f, 1f).build());
 
         addWidget(Button.builder(getEntrance(),
                 Text.translate("mcoo_build_with_ease.clipboard.download.worldedit"), button -> {
-                    export(StructureExporter.Format.WORLDEDIT);
+                    openSaveScreen(StructureExporter.Format.WORLDEDIT);
                 }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 2f, 0f, 1f).build());
 
         addWidget(Button.builder(getEntrance(),
                 Text.translate("mcoo_build_with_ease.clipboard.download.axiom"), button -> {
-                    export(StructureExporter.Format.AXIOM);
+                    openSaveScreen(StructureExporter.Format.AXIOM);
                 }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0f, 1f).build());
 
         addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.cancel"), button -> {
@@ -58,26 +58,28 @@ public class McooBuildwithEaseClipboardDownloadScreen extends AbstractPanelScree
         }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 0f, 1f).build());
     }
 
-    private void export(StructureExporter.Format format) {
-        var player = getEntrance().getClient().getPlayer();
+    private void openSaveScreen(StructureExporter.Format format) {
         if (snapshot == null || snapshot.isEmpty()) {
-            player.sendMessage(McooBuildwithEase.getSystemMessage(
+            getEntrance().getClient().getPlayer().sendMessage(McooBuildwithEase.getSystemMessage(
                     Text.translate("mcoo_build_with_ease.clipboard.download.empty")));
             return;
         }
-        try {
-            var path = doExport(format);
-            player.sendMessage(McooBuildwithEase.getSystemMessage(
-                    Text.translate("mcoo_build_with_ease.clipboard.download.success", path.toString())));
-            detach();
-        } catch (Exception exception) {
-            McooBuildwithEase.LOGGER.error("Failed to export clipboard to " + format, exception);
-            player.sendMessage(McooBuildwithEase.getSystemMessage(
-                    Text.translate("mcoo_build_with_ease.clipboard.download.failed", exception.getMessage() == null ? "" : exception.getMessage())));
-        }
+        var box = getBox();
+        var blocks = snapshot.blockData().stream()
+                .filter(blockData -> blockData.blockState() != null)
+                .map(blockData -> new StructureExporter.Block(
+                        blockData.blockPosition().x() - box.minX(),
+                        blockData.blockPosition().y() - box.minY(),
+                        blockData.blockPosition().z() - box.minZ(),
+                        blockData.blockState()))
+                .toList();
+
+        new McooBuildwithEaseSaveFileScreen(getEntrance(), format, defaultFileName(),
+                box.sizeX(), box.sizeY(), box.sizeZ(), List.copyOf(blocks)).attach();
     }
 
-    private java.nio.file.Path doExport(StructureExporter.Format format) {
+    /** 结构的包围盒（坐标以左下角为原点）。 */
+    private Box getBox() {
         var minX = Integer.MAX_VALUE;
         var minY = Integer.MAX_VALUE;
         var minZ = Integer.MAX_VALUE;
@@ -94,32 +96,22 @@ public class McooBuildwithEaseClipboardDownloadScreen extends AbstractPanelScree
             maxZ = Math.max(maxZ, position.z());
         }
         if (minX > maxX) {
-            minX = minY = minZ = 0;
-            maxX = maxY = maxZ = 0;
+            return new Box(0, 0, 0, 1, 1, 1);
         }
-        final var originX = minX;
-        final var originY = minY;
-        final var originZ = minZ;
-        var sizeX = maxX - minX + 1;
-        var sizeY = maxY - minY + 1;
-        var sizeZ = maxZ - minZ + 1;
+        return new Box(minX, minY, minZ, maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1);
+    }
 
-        var blocks = snapshot.blockData().stream()
-                .filter(blockData -> blockData.blockState() != null)
-                .map(blockData -> new StructureExporter.Block(
-                        blockData.blockPosition().x() - originX,
-                        blockData.blockPosition().y() - originY,
-                        blockData.blockPosition().z() - originZ,
-                        blockData.blockState()))
-                .toList();
+    private record Box(int minX, int minY, int minZ, int sizeX, int sizeY, int sizeZ) {
+    }
 
-        var exporter = PlatformLoader.getSingleton(StructureExporter.class);
-        // 捕捉出来的快照没有名字（上游就是空串），这里补一个带时间戳的，
-        // 免得每次导出都写成同一个文件、把上一次的覆盖掉
-        var name = snapshot.name() == null || snapshot.name().isBlank()
-                ? "structure_" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
-                : snapshot.name();
-        return exporter.export(name, sizeX, sizeY, sizeZ, List.copyOf(blocks), format);
+    /** 默认文件名（捕捉出来的快照没有名字，补一个带时间戳的，免得每次都覆盖同一个文件）。 */
+    private String defaultFileName() {
+        var name = snapshot.name();
+        if (name != null && !name.isBlank()) {
+            return name;
+        }
+        return "structure_" + java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
     }
 
 }

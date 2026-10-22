@@ -559,5 +559,11 @@
   "mcoo_build_with_ease.clipboard.download.axiom": "Axiom 蓝图 (.schem)",
   "mcoo_build_with_ease.clipboard.download.success": "已导出到 %s",
   "mcoo_build_with_ease.clipboard.download.failed": "导出失败：%s",
-  "mcoo_build_with_ease.clipboard.download.empty": "剪贴板里没有结构"
+  "mcoo_build_with_ease.clipboard.download.empty": "剪贴板里没有结构",
+  "mcoo_build_with_ease.button.new_folder": "新建文件夹",
+  "mcoo_build_with_ease.button.parent_folder": "..",
+  "mcoo_build_with_ease.clipboard.download.save_title": "保存结构",
+  "mcoo_build_with_ease.clipboard.download.no_name": "文件名不能为空",
+  "m": "c",
+  "用": "上"
 }

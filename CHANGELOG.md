@@ -18,9 +18,12 @@
   可以把剪贴板里的结构导出成
   - **投影格式 `.litematic`**（Litematica 直接可读）
   - **WorldEdit 格式 `.schem`**（Sponge Schematic v3，WorldEdit / FAWE 直接可读）
-  - **Axiom 蓝图 `.schem`**（Axiom 的「导入 Schematic」能读，文件直接写进 `Axiom/blueprints/`）
+  - **Axiom 蓝图 `.schem`**（Axiom 的「导入 Schematic」能读）
 
-  导出目录：游戏目录下的 `mcoo_build_with_ease_exports/`（Axiom 那份走 `Axiom/blueprints/`）。
+  选完格式会打开**游戏内文件管理器**：默认落在该格式对应的目录
+  （投影/WorldEdit → `mcoo_build_with_ease_exports/`，Axiom → `Axiom/blueprints/`），
+  但玩家可以自己挑目录、可以新建文件夹、可以存到任意路径去分享给别人，**由玩家自己点保存**。
+
   格式规格按上游实现逐字节对齐（Litematica 的紧凑位打包、Sponge v3 的 varint 调色板流）。
   Axiom 原生的 `.bp` 是它的私有二进制格式（魔数 182827830 + 头部 NBT + 缩略图 + 压缩的区块 NBT），
   里面的调色板容器在 26.2 没有公开构造入口，所以暂时用 Axiom 明确支持的 `.schem` 顶上。

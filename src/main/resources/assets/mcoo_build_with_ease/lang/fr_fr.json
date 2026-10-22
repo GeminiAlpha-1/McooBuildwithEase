@@ -559,5 +559,11 @@
   "mcoo_build_with_ease.clipboard.download.axiom": "Axiom blueprint (.schem)",
   "mcoo_build_with_ease.clipboard.download.success": "Exported to %s",
   "mcoo_build_with_ease.clipboard.download.failed": "Export failed: %s",
-  "mcoo_build_with_ease.clipboard.download.empty": "The clipboard is empty"
+  "mcoo_build_with_ease.clipboard.download.empty": "The clipboard is empty",
+  "mcoo_build_with_ease.button.new_folder": "New folder",
+  "mcoo_build_with_ease.button.parent_folder": "..",
+  "mcoo_build_with_ease.clipboard.download.save_title": "Save structure",
+  "mcoo_build_with_ease.clipboard.download.no_name": "The file name cannot be empty",
+  "m": "c",
+  "C": "r"
 }

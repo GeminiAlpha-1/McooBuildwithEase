@@ -2,7 +2,6 @@ package dev.huskuraft.universal.api.export;
 
 import java.nio.file.Path;
 import java.util.List;
-
 import dev.huskuraft.universal.api.core.BlockState;
 
 /**
@@ -69,14 +68,23 @@ public interface StructureExporter {
     /**
      * 导出结构。
      *
-     * @param name    结构名（同时作为文件名）
-     * @param sizeX   结构在 x 方向的大小
-     * @param sizeY   结构在 y 方向的大小
-     * @param sizeZ   结构在 z 方向的大小
-     * @param blocks  结构里的方块（坐标相对结构左下角）
-     * @param format  目标格式
+     * @param directory  保存目录（由调用方决定，比如用户在文件管理器里挑的位置）
+     * @param fileName   文件名（不含扩展名）
+     * @param sizeX      结构在 x 方向的大小
+     * @param sizeY      结构在 y 方向的大小
+     * @param sizeZ      结构在 z 方向的大小
+     * @param blocks     结构里的方块（坐标相对结构左下角）
+     * @param format     目标格式
      * @return 写出的文件路径
      */
-    Path export(String name, int sizeX, int sizeY, int sizeZ, List<Block> blocks, Format format);
+    Path export(Path directory, String fileName, int sizeX, int sizeY, int sizeZ, List<Block> blocks, Format format);
+
+    /**
+     * 某种格式的「默认保存目录」（在游戏目录下）。
+     * <p>
+     * 用来给文件管理器当起始位置 —— 玩家想直接存到对应 mod 的文件夹就存这里，
+     * 想存到别处分享给别人就自己改。
+     */
+    Path defaultDirectory(Format format);
 
 }

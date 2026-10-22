@@ -45,24 +45,33 @@ public class VanillaStructureExporter implements StructureExporter {
     public static final String AXIOM_BLUEPRINT_DIR = "Axiom/blueprints";
 
     @Override
-    public Path export(String name, int sizeX, int sizeY, int sizeZ, List<Block> blocks, Format format) {
+    public Path export(Path directory, String fileName0, int sizeX, int sizeY, int sizeZ, List<Block> blocks, Format format) {
+        var baseName = sanitize(fileName0);
+        // 用户可能自己敲了扩展名，别加成 foo.litematic.litematic
+        var fileName = baseName.toLowerCase().endsWith(format.extension())
+                ? baseName
+                : baseName + format.extension();
         var root = switch (format) {
-            case LITEMATIC -> writeLitematic(name, sizeX, sizeY, sizeZ, blocks);
-            case WORLDEDIT, AXIOM -> writeWorldEdit(name, sizeX, sizeY, sizeZ, blocks);
+            case LITEMATIC -> writeLitematic(baseName, sizeX, sizeY, sizeZ, blocks);
+            case WORLDEDIT, AXIOM -> writeWorldEdit(baseName, sizeX, sizeY, sizeZ, blocks);
         };
-        var gameDir = Minecraft.getInstance().gameDirectory.toPath();
-        // Axiom 的那份直接放进它的蓝图目录，导入时不用再挪
-        var dir = format == Format.AXIOM
-                ? gameDir.resolve(AXIOM_BLUEPRINT_DIR)
-                : gameDir.resolve(EXPORT_DIR);
         try {
-            Files.createDirectories(dir);
-            var path = dir.resolve(sanitize(name) + format.extension());
+            Files.createDirectories(directory);
+            var path = directory.resolve(fileName);
             NbtIo.writeCompressed(root, path);
             return path;
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to export structure to " + format, e);
         }
+    }
+
+    @Override
+    public Path defaultDirectory(Format format) {
+        var gameDir = Minecraft.getInstance().gameDirectory.toPath();
+        // Axiom 的那份默认放进它的蓝图目录，其余放进统一的导出目录
+        return format == Format.AXIOM
+                ? gameDir.resolve(AXIOM_BLUEPRINT_DIR)
+                : gameDir.resolve(EXPORT_DIR);
     }
 
     // ------------------------------------------------------------------
