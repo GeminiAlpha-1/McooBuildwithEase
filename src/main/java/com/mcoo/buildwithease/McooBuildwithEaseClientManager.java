@@ -183,6 +183,7 @@ public final class McooBuildwithEaseClientManager implements ClientManager {
             getEntrance().getClient().getSoundManager().playButtonClickSound();
             new McooBuildwithEaseSettingsScreen(getEntrance()).attach();
         }
+        McooBuildwithEaseDebug.openScreenIfRequested(this);
         if (McooBuildwithEaseKeys.TOGGLE_CLIPBOARD.getKeyBinding().consumeClick()) {
             getEntrance().getClient().getSoundManager().playButtonClickSound();
             getEntrance().getStructureBuilder().setClipboard(getRunningClient().getPlayer(), getEntrance().getStructureBuilder().getContext(getRunningClient().getPlayer()).clipboard().toggled());

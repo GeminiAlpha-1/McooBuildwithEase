@@ -26,6 +26,11 @@ loom {
 			if (project.hasProperty('mcQuickPlay')) {
 				programArgs '--quickPlayMultiplayer', project.property('mcQuickPlay')
 			}
+			// 调试用：自动打开指定界面，便于无人值守截图核对 GUI
+			//   gradlew runClient -PmcDebugScreen=settings
+			if (project.hasProperty('mcDebugScreen')) {
+				vmArgs "-Dmcoo.debugScreen=${project.property('mcDebugScreen')}"
+			}
 		}
 	}
 }

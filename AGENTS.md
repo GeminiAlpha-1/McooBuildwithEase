@@ -68,18 +68,60 @@ $env:GRADLE_USER_HOME="D:\WorkSpace\McooServerFeatures\.gradle-home"   # 共享�
 | `dev.huskuraft/universal/fabric/mixin/MinecraftMixin` | 客户端攻击 / 使用 / 选取方块的拦截，Fabric 没有官方 API |
 
 其余一律用官方 Fabric API 替代（已删：`ShaderManagerMixin` / `PlayerListMixin` / `GuiMixin` / `KeyboardMixin`）。
-新增 mixin 前先确认官方 API 真的没有；注入点一律放 **方法 HEAD**，不要用深层 `INVOKE` 锚点。
 
-## 6. 渲染纪律
+### 5.1 注入点必须还原上游语义，不能改成方法头
+
+**这条踩过坑，代价是世界被铲平。**
+
+上游把事件挂在「真的在攻击 / 真的在用物品」的具体调用点上，事件因此只在**确实存在目标**时触发。
+改到 `@At("HEAD")` 之后，事件会在「按住鼠标的每一 tick」都触发
+（26.2 的 `continueAttack` 在按住时每 tick 都会被调用），
+而业务层 `Context.Interactions#put` 若纯追加不去重，交互列表就会无限增长 →
+客户端每 tick 把越来越大的交互集合发给服务端 → 服务端每 tick 破坏 N 个方块（N 还在涨）。
+
+当前四个锚点（26.2 字节码里都还在，已逐一核对）：
+
+| 方法 | 锚点 |
+|---|---|
+| `startAttack` | `INVOKE HitResult#getType()` |
+| `continueAttack` | `INVOKE BlockState#isAir()` |
+| `startUseItem` | `INVOKE LocalPlayer#getItemInHand(InteractionHand)` |
+| `pickBlockOrEntity` | `INVOKE LocalPlayer#getAbilities()`（26.2 从 `pickBlock` 改名） |
+
+**加新 mixin 前先问：这个事件是不是会在每 tick 触发？**
+
+### 5.2 交互列表按位置去重
+
+`Context.Interactions#put` 现在是「同位置替换、不同位置追加」。
+交互列表的语义是「一组目标位置」，重复指向同一个方块不应该让数量增长。
+
+## 6. GUI 纪律（26.2）
+
+26.2 的 GUI 是 2D 的（`Matrix3x2fStack`），绘制走 `GuiGraphicsExtractor`：
+
+- **2D 矩阵必须复用 `GuiGraphicsExtractor#pose()`**，不要自建。
+  自建矩阵 + 手工变换坐标 = 缩放被应用两次（我们的矩阵一次、extractor 绘制时再一次）
+  → 整个界面变大、轮盘按钮挤成一团。
+- 坐标**不要手工变换**，extractor 绘制时会自己应用 pose（与 1.21.3 用同一个 pose 对象同理）。
+- 原版 GUI 精灵在 26.2 有专门 API：`blitSprite(pipeline, spriteId, ...)`；
+  查精灵用 `AtlasManager` + `SpriteId`，**查不到会拿到「缺失精灵」→ 画出来是紫色棋盘格 + 条纹**。
+  `SpriteId` 的第一个分量在不同版本分别表示过图集纹理位置 / 精灵定义目录，两种都试。
+- `Matrix3x2fStack` 的无参构造会 NPE（内部 `mats` 为 null），要用 `new Matrix3x2fStack(64)`。
+
+## 7. 渲染纪律
 
 - 26.2 渲染栈已重构：旧的 `RenderType` / `RenderStateShard` / `MultiBufferSource` / `ShaderInstance` / `CoreShaders` **全部不存在**。
+- 26.2 的 `RenderType` 构造器是 private、工厂包内可见 → **外部无法自建 RenderType**，
+  只能用 `net.minecraft.client.renderer.rendertype.RenderTypes` 的现成条目。
+- 自定义几何入口：`SubmitNodeCollector.submitCustomGeometry(PoseStack, RenderType, (pose, consumer) -> ...)`，
+  因此**世界侧绘制必须在 `LevelRenderEvents.COLLECT_SUBMITS` 阶段调用**。
 - **不自带自定义着色器**，一律用 vanilla 现成管线（`RenderTypes.OUTLINE` / `LINES` / `SECONDARY_BLOCK_OUTLINE`）+
   顶点色 —— 这样 OpenGL 与 Vulkan 两个后端都自动可用，Vulkan 零风险。
 - 铁律：适配层里不得出现 `GL11` / `lwjgl.opengl` / `com.mojang.blaze3d.systems.RenderSystem` 的 GL 专属状态。
 - 优先用官方 `fabric-rendering-v1`（`FabricRenderPipeline` / `SubmitRenderPhase` / `LevelRenderEvents` / `HudElementRegistry`），
   不要 mixin 渲染内部结构 —— Mojang 已经重构过两次渲染栈，第三次（Vibrant Visuals / deferred）在路上。
 
-## 7. 「服务端装 mod、客户端没装也能进服」
+## 8. 「服务端装 mod、客户端没装也能进服」
 
 这是本项目的核心诉求，任何改动都不能破坏：
 

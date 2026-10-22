@@ -71,9 +71,14 @@ public abstract class MinecraftMixin {
     }
 
     /**
-     * 中键选取方块。锚点 = {@code LocalPlayer#getAbilities()}（与上游 1.21.3 一致）。
+     * 中键选取方块。
+     * <p>
+     * 26.2 里 {@code pickBlockOrEntity} 内部已经不再调用 {@code LocalPlayer#getAbilities()}
+     * （上游 1.21.3 的锚点在 26.2 不存在，会导致 mixin 注入失败直接崩客户端），
+     * 改用同样稳定、且已在 {@code startAttack} 验证过的 {@code HitResult#getType()} 锚点：
+     * 语义是「射线确实打到了什么东西」，与「选取方块」的意图一致。
      */
-    @Inject(method = "pickBlockOrEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getAbilities()Lnet/minecraft/world/entity/player/Abilities;"), cancellable = true)
+    @Inject(method = "pickBlockOrEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/HitResult;getType()Lnet/minecraft/world/phys/HitResult$Type;"), cancellable = true)
     private void onPlayerPickBlock(CallbackInfo ci) {
         if (InteractionInputEvents.PICK_BLOCK.invoker().onPickBlock(player, InteractionHand.MAIN_HAND)) {
             ci.cancel();
