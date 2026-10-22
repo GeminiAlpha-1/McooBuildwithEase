@@ -550,5 +550,14 @@
   "mcoo_build_with_ease.button.per_player_overrides": "Spielerbezogene Überschreibungen",
   "mcoo_build_with_ease.tooltip.click_to_switch_replace_strategy": "Klicken Sie [%s], um die Ersetzungsstrategie zu wechseln",
   "mcoo_build_with_ease.tooltip.click_to_toggle_quick_replace": "Klicken Sie [%s], um die Schnellersetzung ein-/auszuschalten",
-  "mcoo_build_with_ease.option.quick_replace": "Schnellersetzung"
+  "mcoo_build_with_ease.option.quick_replace": "Schnellersetzung",
+  "mcoo_build_with_ease.clipboard.download": "Download",
+  "mcoo_build_with_ease.clipboard.download.tooltip": "Export the structure in the clipboard to a project file",
+  "mcoo_build_with_ease.clipboard.download.title": "Download structure",
+  "mcoo_build_with_ease.clipboard.download.litematic": "Litematica (.litematic)",
+  "mcoo_build_with_ease.clipboard.download.worldedit": "WorldEdit (.schem)",
+  "mcoo_build_with_ease.clipboard.download.axiom": "Axiom blueprint (.schem)",
+  "mcoo_build_with_ease.clipboard.download.success": "Exported to %s",
+  "mcoo_build_with_ease.clipboard.download.failed": "Export failed: %s",
+  "mcoo_build_with_ease.clipboard.download.empty": "The clipboard is empty"
 }

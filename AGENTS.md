@@ -284,6 +284,14 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
   净位移变成 `2×方块位置 - 相机` → **预览框漂到几千格外，而且世界坐标越大偏得越远**
   （近原点的测试世界看不出来，很容易漏测）。
   → `renderBlockState` / `renderBlockEntity` **不要再叠位置**，位姿交给调用方。
+- **26.2 的 `NameAndId`**：服务端判断「是不是房主 / 是不是 OP」的方法
+  （`MinecraftServer#isSingleplayerOwner`、`PlayerList#isOp`）收的是
+  `net.minecraft.server.players.NameAndId`（id + 名字的记录），**不是** `GameProfile`。
+  传错类型 → 服务端在包处理里抛 `ClassCastException` → **回包发不出去 → 界面「点了没反应」**。
+  这种「服务端任务里抛异常」的失败在客户端完全没提示，很容易查不出来 ——
+  排查「点了没反应」时先看**服务端**日志有没有 `Error executing task on Server`。
+- 26.2 的 NBT 读取器（`CompoundTag#getInt` 等）返回的是 `Optional`，写入器（`putInt` 等）是 void；
+  `ResourceKey#location()` 改名成了 `identifier()`，`ResourceLocation` 改名成了 `Identifier`。
 - 自测要覆盖「世界坐标很大」的情况：`tools/behavior-test.ps1` 支持 `MCOO_TELEPORT`
   （用服务器控制台把玩家传送到远处，完整参数串含旋转，例 `MCOO_TELEPORT="1200 100 1200 0 20"`），
   否则近原点的测试世界看不出偏移类问题。
@@ -352,9 +360,12 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
 - 快照子系统在上游 3.4.0 本就是半成品（`SnapshotConfigSerializer` 空实现、库页 export/edit 按钮空实现、
   `PlayerSnapshotCapturePacket` 服务端 handler 空），v1.1 要补的话建议直接落 schematic 格式。
 
-## 10. 对 vendored common-api 的改动（只有这一处）
+## 10. 对 vendored common-api 的改动
 
-`api/platform/Entrance.java` 的 `findPlugin`：
+> 改 common-api 的规矩：**只做行为修复，不动接口签名与命名**（`ResourceLocation` 等名字保持上游原样）。
+> 唯一的例外是**新增**接口（不改动任何已有签名），且必须是「平台能力」而不是「业务逻辑」。
+
+### 10.1 `api/platform/Entrance.java` 的 `findPlugin`（行为修复）
 
 上游只捕获 `LinkageError`，假设插件实现类一定随 universal 一起打包；
 我们按范围决策**不打包** FTB Chunks / OpenPAC 的实现，ServiceLoader 找不到实现时会抛
@@ -363,4 +374,22 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
 已改为同时捕获 `NoSuchElementException`，插件没装时返回 `Optional.empty()`，由调用方自行降级。
 拦截器（`OpenPacInterceptor` / `FtbChunksInterceptor`）本身是「插件不在就禁用」的设计，不用改。
 
-> 改 common-api 的规矩：**只做行为修复，不动接口签名与命名**（`ResourceLocation` 等名字保持上游原样）。
+### 10.2 `api/export/StructureExporter.java`（新增接口，移植新增）
+
+「把结构导出成建模工具能读的文件」这件事，**只有平台层知道格式细节**
+（NBT 的结构、调色板怎么编、位怎么打包），而业务代码不能直接依赖 MC 类（见第 2 节铁律）。
+所以在 common-api 里加一个中性的接口，实现在 vanilla 层、用 `@AutoService` 注册：
+
+```java
+Path export(String name, int sizeX, int sizeY, int sizeZ, List<Block> blocks, Format format);
+```
+
+`Block` 记录带的是 common-api 的 `BlockState`，平台层自己转成 vanilla 的方块状态。
+调用方：`PlatformLoader.getSingleton(StructureExporter.class)`。
+
+支持的格式（规格都对着上游实现逐字节对齐）：
+- `.litematic`（Litematica）：调色板列表 + **紧凑位打包**的 long 数组，
+  位宽 `max(2, ceil(log2(调色板大小)))`，低位在前、允许跨 64 位边界，
+  索引顺序 `x + z*sizeX + y*sizeX*sizeZ`。
+- `.schem`（Sponge Schematic v3）：`Palette` 是「方块状态字符串 → 序号」的复合标签，
+  `Data` 是 varint 编码的序号流，顺序 `y → z → x`。

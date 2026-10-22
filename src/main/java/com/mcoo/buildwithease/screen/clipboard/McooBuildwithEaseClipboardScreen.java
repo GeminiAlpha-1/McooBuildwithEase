@@ -15,8 +15,6 @@ import dev.huskuraft.universal.api.platform.Entrance;
 import dev.huskuraft.universal.api.text.Text;
 import com.mcoo.buildwithease.building.clipboard.Clipboard;
 import com.mcoo.buildwithease.building.clipboard.Snapshot;
-import com.mcoo.buildwithease.networking.packets.player.PlayerSnapshotSharePacket;
-import com.mcoo.buildwithease.screen.player.McooBuildwithEaseOnlinePlayersScreen;
 
 public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
 
@@ -31,8 +29,7 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
     private Button historyButton;
     private Button playerSharingButton;
     private Button clearButton;
-    private Button editButton;
-    private Button shareButton;
+    private Button downloadButton;
 //    private EditBox nameEditBox;
 
     public McooBuildwithEaseClipboardScreen(Entrance entrance) {
@@ -95,27 +92,20 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
 //        }).setBounds(this.snapshotWidget.getRight() - Button.DEFAULT_HEIGHT - 2, this.snapshotWidget.getTop() + 2 * 4 + Button.DEFAULT_HEIGHT * 3, Button.DEFAULT_HEIGHT, Button.DEFAULT_HEIGHT).build());
 
 
-        this.editButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.edit"), button -> {
-
-        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 3 / 4f, 1 / 4f).build());
-
-        this.shareButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.share"), button -> {
-            new McooBuildwithEaseOnlinePlayersScreen(getEntrance(), playerInfo -> {
-                getEntrance().getChannel().sendPacket(new PlayerSnapshotSharePacket(getPlayer().getId(), playerInfo.getId(), clipboard.snapshot()));
-                detach();
-            }).attach();
-        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 1 / 4f, 1 / 4f).build());
+        this.downloadButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.clipboard.download"), button -> {
+            new McooBuildwithEaseClipboardDownloadScreen(getEntrance(), this.clipboard.snapshot()).attach();
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0.5f, 0.5f).build());
 
         this.clearButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.clear"), button -> {
             this.clipboard = this.clipboard.withSnapshot(Snapshot.EMPTY);
 
-        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 2 / 4f, 1 / 4f).build());
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0.25f, 0.25f).build());
 
         this.historyButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.history"), button -> {
             new McooBuildwithEaseStructureSnapshotsHistoryScreen(getEntrance(), snapshot -> {
                 this.clipboard = this.clipboard.withSnapshot(snapshot);
             }).attach();
-        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0 / 4f, 1 / 4f).build());
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0f, 0.25f).build());
 
 //        this.libraryButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.library"), button -> {
 //            new McooBuildwithEaseStructureSnapshotsLibraryScreen(getEntrance(), snapshot -> {
@@ -145,14 +135,11 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
 
 //        this.libraryButton.setTooltip(TooltipHelper.makeSummary(getTypeface(), Text.translate("mcoo_build_with_ease.button.library"), Text.translate("mcoo_build_with_ease.clipboard.library.tooltip")));
 
-        this.shareButton.setTooltip(TooltipHelper.makeSummary(getTypeface(), Text.translate("mcoo_build_with_ease.button.share"), Text.translate("mcoo_build_with_ease.clipboard.share.tooltip")));
-        this.shareButton.setActive(!clipboard.isEmpty());
+        this.downloadButton.setTooltip(TooltipHelper.makeSummary(getTypeface(), Text.translate("mcoo_build_with_ease.clipboard.download"), Text.translate("mcoo_build_with_ease.clipboard.download.tooltip")));
+        this.downloadButton.setActive(!clipboard.isEmpty());
 
         this.clearButton.setTooltip(TooltipHelper.makeSummary(getTypeface(), Text.translate("mcoo_build_with_ease.button.clear"), Text.translate("mcoo_build_with_ease.clipboard.clear.tooltip")));
         this.clearButton.setActive(!clipboard.isEmpty());
-
-        this.editButton.setTooltip(TooltipHelper.makeSummary(getTypeface(), Text.translate("mcoo_build_with_ease.button.edit"), Text.translate("mcoo_build_with_ease.clipboard.edit.tooltip")));
-        this.editButton.setActive(!clipboard.isEmpty());
 
         this.enableButton.setTooltip(TooltipHelper.makeSummary(getTypeface(), clipboard.enabled() ? Text.translate("mcoo_build_with_ease.clipboard.button.disable") : Text.translate("mcoo_build_with_ease.clipboard.button.enable"), Text.translate("mcoo_build_with_ease.clipboard.enable_clipboard.tooltip", OptionKeys.KEY_ATTACK.getKeyBinding().getKey().getNameText(), OptionKeys.KEY_USE.getKeyBinding().getKey().getNameText())));
 

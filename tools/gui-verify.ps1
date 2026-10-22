@@ -1,11 +1,70 @@
 ﻿# GUI 视觉验证：起服一次 → 逐个界面：起客户端(自动开界面) → 截图 → 只停客户端
-param([string]$Screens = 'settings,radial')
+param([string]$Screens = 'settings,radial', [string]$Click = '')
 $ErrorActionPreference = 'Stop'
 $proj = Split-Path -Parent $PSScriptRoot
 $ts = if ($env:MCOO_TEST_SERVER) { $env:MCOO_TEST_SERVER } else { Join-Path (Split-Path -Parent $PSScriptRoot) 'testserver' }
 $out = if ($env:MCOO_SHOTS) { $env:MCOO_SHOTS } else { Join-Path (Split-Path -Parent $PSScriptRoot) '_shots' }
 if ($env:MCOO_GRADLE_HOME) { $env:GRADLE_USER_HOME = $env:MCOO_GRADLE_HOME }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win2 {
+    [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+    [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr hWnd, out RECT rect);
+    [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr hWnd, ref POINT pt);
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint d, IntPtr e);
+    public const uint LEFTDOWN = 0x0002, LEFTUP = 0x0004;
+}
+"@
+
+# 在 MC 窗口的屏幕中心（逻辑像素）偏移 (dx,dy) 处点一下
+function Invoke-Click {
+    param([int]$Dx, [int]$Dy)
+    $proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*Minecraft*' } | Select-Object -First 1
+    if (-not $proc) { Write-Host "  找不到 MC 窗口，跳过点击"; return }
+    [Win2]::ShowWindow($proc.MainWindowHandle, 9) | Out-Null
+    [Win2]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null
+    Start-Sleep -Seconds 1
+    $client = New-Object Win2+RECT
+    [Win2]::GetClientRect($proc.MainWindowHandle, [ref]$client) | Out-Null
+    $origin = New-Object Win2+POINT
+    $origin.X = 0
+    $origin.Y = 0
+    [Win2]::ClientToScreen($proc.MainWindowHandle, [ref]$origin) | Out-Null
+    $cw = $client.Right - $client.Left
+    $ch = $client.Bottom - $client.Top
+    # 窗口没拿到焦点的话，第一次点击只会用来激活窗口 —— 先点一下标题栏强制聚焦（点在标题栏不会影响游戏）
+    if ([Win2]::GetForegroundWindow() -ne $proc.MainWindowHandle) {
+        $wr = New-Object Win2+RECT
+        [Win2]::GetWindowRect($proc.MainWindowHandle, [ref]$wr) | Out-Null
+        [Win2]::SetCursorPos($wr.Left + 60, $wr.Top + 10) | Out-Null
+        [Win2]::mouse_event([Win2]::LEFTDOWN, 0, 0, 0, [IntPtr]::Zero)
+        Start-Sleep -Milliseconds 80
+        [Win2]::mouse_event([Win2]::LEFTUP, 0, 0, 0, [IntPtr]::Zero)
+        Start-Sleep -Seconds 1
+        [Win2]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null
+        Start-Sleep -Seconds 1
+    }
+    $guiScale = [Math]::Max(1, [Math]::Min([Math]::Floor($cw / 320), [Math]::Floor($ch / 240)))
+    $px = $origin.X + [int](($cw / 2 + $Dx * $guiScale))
+    $py = $origin.Y + [int](($ch / 2 + $Dy * $guiScale))
+    Write-Host ("  click at " + $px + "," + $py + " (guiScale=$guiScale, focused=" + ([Win2]::GetForegroundWindow() -eq $proc.MainWindowHandle) + ")")
+    [Win2]::SetCursorPos($px, $py) | Out-Null
+    Start-Sleep -Milliseconds 600
+    [Win2]::mouse_event([Win2]::LEFTDOWN, 0, 0, 0, [IntPtr]::Zero)
+    Start-Sleep -Milliseconds 120
+    [Win2]::mouse_event([Win2]::LEFTUP, 0, 0, 0, [IntPtr]::Zero)
+    Start-Sleep -Seconds 3
+}
 
 function Stop-Client {
     Get-CimInstance Win32_Process -Filter "Name='java.exe'" | ForEach-Object {
@@ -91,6 +150,14 @@ foreach ($s in ($Screens -split ',')) {
     Write-Host ("  joined: " + $joined)
     if (-not $joined) { Write-Host "  跳过（未进服）"; continue }
     Start-Sleep -Seconds 12
+
+    if ($Click -ne '') {
+        # 支持多次点击：-Click "dx,dy;dx,dy"（每次都是相对屏幕中心的逻辑像素偏移）
+        foreach ($one in ($Click -split ';')) {
+            $parts = $one -split ','
+            Invoke-Click -Dx ([int]$parts[0]) -Dy ([int]$parts[1])
+        }
+    }
 
     $shot = Join-Path $out "gui-$s.png"
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'screenshot.ps1') -Out $shot

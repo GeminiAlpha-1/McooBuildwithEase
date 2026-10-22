@@ -14,6 +14,16 @@
 - **径向菜单改成切换式**：按一下 `左 Alt` 打开、再按一下关闭；选中建造模式后自动关闭
   （上游是「按住显示、松开关闭」）。
 - **只支持 Fabric**，不再维护 Quilt / Forge / NeoForge。
+- **结构下载（本项目第一个自己加的功能）**：剪贴板界面里的「分享」「编辑」合并成一个「下载」，
+  可以把剪贴板里的结构导出成
+  - **投影格式 `.litematic`**（Litematica 直接可读）
+  - **WorldEdit 格式 `.schem`**（Sponge Schematic v3，WorldEdit / FAWE 直接可读）
+  - **Axiom 蓝图 `.schem`**（Axiom 的「导入 Schematic」能读，文件直接写进 `Axiom/blueprints/`）
+
+  导出目录：游戏目录下的 `mcoo_build_with_ease_exports/`（Axiom 那份走 `Axiom/blueprints/`）。
+  格式规格按上游实现逐字节对齐（Litematica 的紧凑位打包、Sponge v3 的 varint 调色板流）。
+  Axiom 原生的 `.bp` 是它的私有二进制格式（魔数 182827830 + 头部 NBT + 缩略图 + 压缩的区块 NBT），
+  里面的调色板容器在 26.2 没有公开构造入口，所以暂时用 Axiom 明确支持的 `.schem` 顶上。
 
 ### 修复（26.2 适配）
 
@@ -42,3 +52,9 @@
   → 滚动条改为默认常显，轨道宽度和预留宽度对齐；没有可滚动内容时滑块停在顶端。
 - **剪贴板没有结构预览**：26.2 的 GUI 只有 2D 渲染管线（1.21.3 时 GUI 用 3D 位姿，可以直接摆方块模型），
   改成「等轴测投影 + 每格画一个方块物品」（方块的物品模型本身就是 3D 立方体，带真实贴图）。
+- **通用设置点了没反应**：26.2 的 `MinecraftServer#isSingleplayerOwner` / `PlayerList#isOp`
+  收的是 `NameAndId`（id + 名字的记录），不是 `GameProfile` —— 传错类型服务端直接抛
+  `ClassCastException`，权限校验的回包发不出去，界面就卡在「点了没反应」。
+- **每次建造的方块数上限改不了 / 太小**：上限设置在「通用设置」里（上面那个问题导致根本进不去），
+  另外把默认的 1 万方块提到 10 万（客户端的预览上限也从 1024 提到 4096，
+  否则建造范围一大预览整个不显示）。

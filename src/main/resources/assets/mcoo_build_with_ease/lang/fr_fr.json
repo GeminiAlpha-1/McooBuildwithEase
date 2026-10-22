@@ -550,5 +550,14 @@
   "mcoo_build_with_ease.button.per_player_overrides": "Remplacements par Joueur",
   "mcoo_build_with_ease.tooltip.click_to_switch_replace_strategy": "Cliquez [%s] pour changer la stratégie de remplacement",
   "mcoo_build_with_ease.tooltip.click_to_toggle_quick_replace": "Cliquez [%s] pour activer/désactiver le remplacement rapide",
-  "mcoo_build_with_ease.option.quick_replace": "Remplacement rapide"
+  "mcoo_build_with_ease.option.quick_replace": "Remplacement rapide",
+  "mcoo_build_with_ease.clipboard.download": "Download",
+  "mcoo_build_with_ease.clipboard.download.tooltip": "Export the structure in the clipboard to a project file",
+  "mcoo_build_with_ease.clipboard.download.title": "Download structure",
+  "mcoo_build_with_ease.clipboard.download.litematic": "Litematica (.litematic)",
+  "mcoo_build_with_ease.clipboard.download.worldedit": "WorldEdit (.schem)",
+  "mcoo_build_with_ease.clipboard.download.axiom": "Axiom blueprint (.schem)",
+  "mcoo_build_with_ease.clipboard.download.success": "Exported to %s",
+  "mcoo_build_with_ease.clipboard.download.failed": "Export failed: %s",
+  "mcoo_build_with_ease.clipboard.download.empty": "The clipboard is empty"
 }

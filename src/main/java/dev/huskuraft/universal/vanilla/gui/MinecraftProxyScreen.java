@@ -70,6 +70,10 @@ public final class MinecraftProxyScreen extends net.minecraft.client.gui.screens
     // 26.2 把鼠标/键盘事件改成了 record（MouseButtonEvent / KeyEvent / CharacterEvent），不再传裸 int
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (dev.huskuraft.universal.vanilla.renderer.MinecraftBufferSource.DEBUG) {
+            org.slf4j.LoggerFactory.getLogger(MinecraftProxyScreen.class)
+                    .info("[gui] mouseClicked at ({},{}) button={}", event.x(), event.y(), event.button());
+        }
         return proxy.onMouseClicked(event.x(), event.y(), event.button());
     }
 

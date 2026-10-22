@@ -33,19 +33,19 @@ public record ConstraintConfig(
     public static final int MAX_REACH_DISTANCE_RANGE_START = 0;
     public static final int MAX_REACH_DISTANCE_RANGE_END = Short.MAX_VALUE;
 
-    public static final int MAX_BLOCK_BREAK_VOLUME_DEFAULT = 10 * 1000;
+    public static final int MAX_BLOCK_BREAK_VOLUME_DEFAULT = 100 * 1000;
     public static final int MAX_BLOCK_BREAK_VOLUME_RANGE_START = 0;
     public static final int MAX_BLOCK_BREAK_VOLUME_RANGE_END = 1000 * 1000;
 
-    public static final int MAX_BLOCK_PLACE_VOLUME_DEFAULT = 10 * 1000;
+    public static final int MAX_BLOCK_PLACE_VOLUME_DEFAULT = 100 * 1000;
     public static final int MAX_BLOCK_PLACE_VOLUME_RANGE_START = 0;
     public static final int MAX_BLOCK_PLACE_VOLUME_RANGE_END = 1000 * 1000;
 
-    public static final int MAX_BLOCK_INTERACT_VOLUME_DEFAULT = 10 * 1000;
+    public static final int MAX_BLOCK_INTERACT_VOLUME_DEFAULT = 100 * 1000;
     public static final int MAX_BLOCK_INTERACT_VOLUME_RANGE_START = 0;
     public static final int MAX_BLOCK_INTERACT_VOLUME_RANGE_END = 1000 * 1000;
 
-    public static final int MAX_STRUCTURE_COPY_PASTE_VOLUME_DEFAULT = 10 * 1000;
+    public static final int MAX_STRUCTURE_COPY_PASTE_VOLUME_DEFAULT = 100 * 1000;
     public static final int MAX_STRUCTURE_COPY_PASTE_VOLUME_RANGE_START = 0;
     public static final int MAX_STRUCTURE_COPY_PASTE_VOLUME_RANGE_END = 1000 * 1000;
 

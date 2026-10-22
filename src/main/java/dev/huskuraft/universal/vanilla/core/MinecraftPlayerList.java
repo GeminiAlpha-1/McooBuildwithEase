@@ -24,7 +24,8 @@ public record MinecraftPlayerList(
 
     @Override
     public boolean isOperator(PlayerProfile profile) {
-        return refs.isOp(profile.reference());
+        // 【26.2 修正】26.2 的 PlayerList#isOp 收的是 NameAndId，不是 GameProfile
+        return refs.isOp(new net.minecraft.server.players.NameAndId(profile.getId(), profile.getName()));
     }
 
 }

@@ -94,9 +94,11 @@ public final class McooBuildwithEaseNetworkChannel extends NetworkChannel<AllPac
 
         @Override
         public void handle(PlayerPermissionCheckPacket packet, Player player) {
+            McooBuildwithEase.LOGGER.info("[permission] 服务端收到权限校验请求 player={}", player.getProfile().getName());
             getEntrance().getServer().execute(() -> {
                 var isSinglePlayerOwner = getEntrance().getServerManager().getRunningServer().isSinglePlayerOwner(player.getProfile());
                 var isOperator = getEntrance().getServerManager().getRunningServer().isOperator(player.getProfile());
+                McooBuildwithEase.LOGGER.info("[permission] owner={} operator={} -> 回包", isSinglePlayerOwner, isOperator);
                 getEntrance().getChannel().sendPacket(new PlayerPermissionCheckPacket(packet.responseId(), packet.playerId(), isSinglePlayerOwner || isOperator), player);
             });
 

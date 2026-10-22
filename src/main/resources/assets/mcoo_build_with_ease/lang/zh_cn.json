@@ -550,5 +550,14 @@
   "mcoo_build_with_ease.button.per_player_overrides": "特定玩家配置",
   "mcoo_build_with_ease.tooltip.click_to_switch_replace_strategy": "点击[%s]切换替换策略",
   "mcoo_build_with_ease.tooltip.click_to_toggle_quick_replace": "点击[%s]切换快速替换开/关",
-  "mcoo_build_with_ease.option.quick_replace": "快速替换"
+  "mcoo_build_with_ease.option.quick_replace": "快速替换",
+  "mcoo_build_with_ease.clipboard.download": "下载",
+  "mcoo_build_with_ease.clipboard.download.tooltip": "把剪贴板里的结构导出成工程文件",
+  "mcoo_build_with_ease.clipboard.download.title": "下载结构",
+  "mcoo_build_with_ease.clipboard.download.litematic": "投影格式 (.litematic)",
+  "mcoo_build_with_ease.clipboard.download.worldedit": "WorldEdit 格式 (.schem)",
+  "mcoo_build_with_ease.clipboard.download.axiom": "Axiom 蓝图 (.schem)",
+  "mcoo_build_with_ease.clipboard.download.success": "已导出到 %s",
+  "mcoo_build_with_ease.clipboard.download.failed": "导出失败：%s",
+  "mcoo_build_with_ease.clipboard.download.empty": "剪贴板里没有结构"
 }

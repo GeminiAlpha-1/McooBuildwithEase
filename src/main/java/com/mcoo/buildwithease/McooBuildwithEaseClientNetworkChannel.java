@@ -98,6 +98,7 @@ public final class McooBuildwithEaseClientNetworkChannel extends NetworkChannel<
 
         @Override
         public void handle(PlayerPermissionCheckPacket packet, Player player) {
+            McooBuildwithEase.LOGGER.info("[permission] 收到服务端回包 granted={} responseId={}", packet.granted(), packet.responseId());
         }
 
         @Override

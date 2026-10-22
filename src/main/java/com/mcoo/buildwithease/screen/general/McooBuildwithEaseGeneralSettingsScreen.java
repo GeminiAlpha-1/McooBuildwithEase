@@ -29,6 +29,7 @@ public class McooBuildwithEaseGeneralSettingsScreen extends AbstractPanelScreen 
         addWidget(new TextWidget(getEntrance(), getLeft() + getWidth() / 2, getTop() + PANEL_TITLE_HEIGHT_1 - 10, getScreenTitle().withColor(AbstractPanelScreen.TITLE_COLOR), TextWidget.Gravity.CENTER));
 
         this.globalButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.global_general_settings.title"), button -> {
+            com.mcoo.buildwithease.McooBuildwithEase.LOGGER.info("[general] 全局通用设置 被点击, 会话状态 = {}", getEntrance().getSessionManager().getSessionStatus());
             if (!getEntrance().getSessionManager().isSessionValid()) {
                 getEntrance().getClient().execute(() -> {
                     new McooBuildwithEaseSessionStatusScreen(getEntrance()).attach();
