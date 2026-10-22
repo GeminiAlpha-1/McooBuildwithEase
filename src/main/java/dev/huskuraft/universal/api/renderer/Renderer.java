@@ -118,26 +118,20 @@ public abstract class Renderer {
         var pose = lastMatrixPose();
         var p1 = pose.mul(new Vector4f(x, y, 0F, 1.0F));
         var p2 = pose.mul(new Vector4f(x + width, y + height, 0F, 1.0F));
-        this.applyScissor(scissorStack.push(new ScreenRect((int) p1.x(), (int) p1.y(), (int) (p2.x() - p1.x()), (int) (p2.y() - p1.y()))));
+        var rect = new ScreenRect((int) p1.x(), (int) p1.y(), (int) (p2.x() - p1.x()), (int) (p2.y() - p1.y()));
+        scissorStack.push(rect);
+        // 【26.2 修正 · scissor 栈】
+        // 26.2 的裁剪是**栈**（GuiGraphicsExtractor 内部自己跟父级求交），
+        // 所以这里必须和平台一一对应：进来 push 一次，出去 pop 一次。
+        // 之前「弹出时重新 push 父级矩形」会把平台的栈越堆越高：
+        // 列表裁剪框 ∩ 第 1 行裁剪框 = 第 1 行 → 再 push 第 2 行就变成空集，
+        // 后面所有内容（含按钮）全被裁掉 —— 症状就是「列表只有第一行可见」。
+        enableScissor(rect.left(), rect.top(), Math.max(0, rect.width()), Math.max(0, rect.height()));
     }
 
     public final void popScissor() {
-        this.applyScissor(scissorStack.pop());
-    }
-
-    private void applyScissor(ScreenRect rect) {
-//        this.flushIfManaged();
-        if (rect == null) {
-            disableScissor();
-        } else {
-            var height = getWindow().getHeight();
-            var scale = getWindow().getGuiScaledFactor();
-            var d1 = rect.left() * scale;
-            var d2 = height - rect.bottom() * scale;
-            var d3 = rect.width() * scale;
-            var d4 = rect.height() * scale;
-            enableScissor((int) d1, (int) d2, Math.max(0, (int) d3), Math.max(0, (int) d4));
-        }
+        scissorStack.pop();
+        disableScissor();
     }
 
     public abstract void setRsShaderColor(float red, float green, float blue, float alpha);

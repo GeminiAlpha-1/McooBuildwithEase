@@ -1,5 +1,6 @@
 package dev.huskuraft.universal.vanilla.renderer;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,6 +61,8 @@ public class MinecraftRenderer extends Renderer {
     private final Matrix3x2fStack matrix2d;
     /** {@code setRsShaderColor} 的全局着色，26.2 没有 shader color 了，改成乘到顶点色上。 */
     private final float[] tint = {1.0F, 1.0F, 1.0F, 1.0F};
+    /** 最近一次设置的裁剪框（诊断用）。 */
+    private static int[] lastScissor = null;
 
     /**
      * GUI / HUD 渲染（2D）。
@@ -141,7 +144,11 @@ public class MinecraftRenderer extends Renderer {
     @Override
     protected void enableScissor(int x, int y, int width, int height) {
         if (graphics != null) {
-            graphics.enableScissor(x, y, width, height);
+            // 【26.2 修正 · scissor 语义】26.2 的 enableScissor 收的是「角点 (x1,y1,x2,y2)」，
+            // 而且是 GUI 逻辑坐标（y 向下），和原版 AbstractSelectionList 的用法一致。
+            // 1.21.3 的 RenderSystem.enableScissor 是 (x, y, 宽, 高) + 物理像素 + 原点在左下。
+            lastScissor = new int[]{x, y, width, height};
+            graphics.enableScissor(x, y, x + width, y + height);
         }
         // 世界模式：26.2 的 scissor 是渲染通道状态（ScissorState），没有对外的公开入口
     }
@@ -243,9 +250,10 @@ public class MinecraftRenderer extends Renderer {
             flushPending();
             var position = transformGui(x, y);
             if (MinecraftBufferSource.DEBUG) {
-                LOGGER.info("[gui] text '{}' at ({},{}) color={} styleColor={}", component.getString(),
+                LOGGER.info("[gui] text '{}' at ({},{}) color={} styleColor={} scissor={}", component.getString(),
                         position[0], position[1], Integer.toHexString(opaque),
-                        component.getStyle().getColor() == null ? "null" : Integer.toHexString(component.getStyle().getColor().getValue()));
+                        component.getStyle().getColor() == null ? "null" : Integer.toHexString(component.getStyle().getColor().getValue()),
+                        lastScissor == null ? "none" : Arrays.toString(lastScissor));
             }
             graphics.text(font, component, position[0], position[1], opaque, shadow);
             return font.width(component);

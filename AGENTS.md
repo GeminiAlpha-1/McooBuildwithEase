@@ -245,6 +245,30 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
 
 ## 7. 渲染纪律
 
+- **26.2 的 GUI 裁剪（scissor）是栈，坐标是「GUI 逻辑坐标的角点」**。
+  - `GuiGraphicsExtractor#enableScissor(x1, y1, x2, y2)` 收的是**角点**（不是 1.21.3 的「宽高」），
+    而且是**逻辑坐标、y 向下**（和原版 `AbstractSelectionList` 的用法一致）。
+    1.21.3 的 `RenderSystem.enableScissor` 是「物理像素 + 原点在左下」，换算方式完全不同。
+  - 它是**栈**：平台内部会自己跟父级求交，所以适配层必须**一一对应地 push / pop**。
+    之前「pop 时重新 push 父级矩形」会把平台的栈越堆越高：
+    列表框 ∩ 第 1 行 = 第 1 行 → 再 push 第 2 行就变成**空集** → 后面所有内容（含按钮）全被裁掉。
+  - 症状：`common-api` 的 `pushScissor` / `popScissor` 必须成对调用平台接口，
+    不能用「重新 push 父级」的方式回退。
+  - 症状表现：设置界面里**只有列表第一行可见**，其余条目和底部按钮全没了
+    （文本其实已经画了，只是被空裁剪框裁掉）。
+- **世界侧几何必须显式 flush**。common-api 的 `renderQuad` / `renderQuadUV` **不 flush**（只有
+  `renderRect` / `renderTexture` / `renderText` 会），而 1.21.3 是由原版在帧末统一 `endBatch()`。
+  26.2 改成渲染状态后没人替我们 flush → **整段几何（选区框 / 图案 / 变换器预览）根本不会进渲染状态**
+  （实测提交次数 0 → 加上 flush 后 1412）。
+  → `LevelRenderEvents.COLLECT_SUBMITS` 的处理函数末尾要 `renderer.flush()`。
+- **模型矩阵只能应用一次**。顶点在 common-api 那边已经按模型矩阵变换过了（写进顶点缓冲时），
+  `submitCustomGeometry` 再把 PoseStack 的矩阵当模型矩阵用一次就变成变换两次。
+  → 提交自定义几何时传一个**单位矩阵**的 PoseStack（`MinecraftBufferSource.IDENTITY_POSE`），
+  回调里也**不要**再用回调给的 pose（`addVertex(x,y,z)` 而不是 `addVertex(pose,x,y,z)`）。
+- **列表的滚动条默认常显**。列表右边一直给滚动条留了 8px（`getScrollbarPosition()` 落在列表右边缘外侧），
+  滚动条时有时无的话那条缝看着就像「内容框没对齐、往左歪了」。
+  → `AbstractEntryList.isAlwaysShowScrollbar` 默认 `true`，滚动条轨道宽度和列表预留的 8px 对齐。
+  → 没有可滚动内容时，滑块要停在 `y0`（之前写成 0，滑块被画到屏幕最上面去了）。
 - **26.2 的世界模型空间是「相机相对」的**（和 1.21.3 一样），这一点必须先确认再动坐标。
   实证（26.2 原版字节码）：
   - `LevelRenderer#submitFeatures` 新建一个**单位矩阵**的 PoseStack；
@@ -260,21 +284,14 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
   净位移变成 `2×方块位置 - 相机` → **预览框漂到几千格外，而且世界坐标越大偏得越远**
   （近原点的测试世界看不出来，很容易漏测）。
   → `renderBlockState` / `renderBlockEntity` **不要再叠位置**，位姿交给调用方。
-- **世界侧几何必须显式 flush**。common-api 的 `renderQuad` / `renderQuadUV` **不 flush**（只有
-  `renderRect` / `renderTexture` / `renderText` 会），而 1.21.3 是由原版在帧末统一 `endBatch()`。
-  26.2 改成渲染状态后没人替我们 flush → **整段几何（选区框 / 图案 / 变换器预览）根本不会进渲染状态**
-  （实测提交次数 0 → 加上 flush 后 1412）。
-  → `LevelRenderEvents.COLLECT_SUBMITS` 的处理函数末尾要 `renderer.flush()`。
-- **模型矩阵只能应用一次**。顶点在 common-api 那边已经按模型矩阵变换过了（写进顶点缓冲时），
-  `submitCustomGeometry` 再把 PoseStack 的矩阵当模型矩阵用一次就变成变换两次。
-  → 提交自定义几何时传一个**单位矩阵**的 PoseStack（`MinecraftBufferSource.IDENTITY_POSE`），
-  回调里也**不要**再用回调给的 pose（`addVertex(x,y,z)` 而不是 `addVertex(pose,x,y,z)`）。
 - 自测要覆盖「世界坐标很大」的情况：`tools/behavior-test.ps1` 支持 `MCOO_TELEPORT`
   （用服务器控制台把玩家传送到远处，完整参数串含旋转，例 `MCOO_TELEPORT="1200 100 1200 0 20"`），
   否则近原点的测试世界看不出偏移类问题。
   ⚠️ 给服务端控制台发命令**必须绕开 `StreamWriter`**（它用 `[Console]::InputEncoding`，
   本机是带 BOM 的 UTF-8，命令名会变成 `﻿tp` → "Unknown or incomplete command"）。
   脚本里 `Send-ServerCommand` 直接往底层流写无 BOM 字节。
+- GUI 界面自测：`tools/gui-verify.ps1 -Screens "builder,pattern,presets,general,clipboard,session"`
+  （靠 `-Dmcoo.debugScreen=` 自动开界面截图；可用界面见 `McooBuildwithEaseDebug`）。
 
 - 26.2 渲染栈已重构：旧的 `RenderType` / `RenderStateShard` / `MultiBufferSource` / `ShaderInstance` / `CoreShaders` **全部不存在**。
 - 26.2 的 `RenderType` 构造器是 private、工厂包内可见 → **外部无法自建 RenderType**，

@@ -27,7 +27,14 @@ public abstract class AbstractEntryList<E extends AbstractEntryList.Entry> exten
     protected boolean backgroundTransparent = false;
     protected boolean renderShadow = true;
     protected boolean renderSelection = true;
-    protected boolean isAlwaysShowScrollbar = false;
+    /**
+     * 滚动条是否常显。
+     * <p>
+     * 列表的右边一直给滚动条留了 8px（{@code getScrollbarPosition()} 落在列表右边缘外侧），
+     * 如果滚动条时有时无，那条空出来的缝看起来就像「内容框没对齐、往左歪了」。
+     * → 默认常显，让内容区和面板内边缘齐平。
+     */
+    protected boolean isAlwaysShowScrollbar = true;
     protected boolean isShowScrollBar = true;
 
     protected boolean scrolling;
@@ -328,16 +335,22 @@ public abstract class AbstractEntryList<E extends AbstractEntryList.Entry> exten
     }
 
     protected void updateScrollingState(double d, double e, int i) {
-        this.scrolling = i == 0 && d >= (double) this.getScrollbarPosition() && d < (double) (this.x0 + this.getScrollbarPosition() + 6);
+        this.scrolling = i == 0 && d >= (double) this.getScrollbarPosition() && d < (double) (this.getScrollbarPosition() + this.getScrollbarWidth());
     }
 
     // TODO: 12/9/23
+    /**
+     * 滚动条所在的 x（列表右边缘）。
+     * <p>
+     * 紧贴列表右边缘（不额外留缝），加上滚动条自身的宽度正好等于界面预留的 8px，
+     * 这样「列表背景 + 滚动条」拼起来就是齐的，不会看着像内容框往左歪了。
+     */
     protected int getScrollbarPosition() {
-        return this.x0 + this.getWidth() + 2;
+        return this.x0 + this.getWidth();
     }
 
     protected int getScrollbarWidth() {
-        return 6;
+        return 8;
     }
 
     protected void moveSelection(SelectionDirection selectionDirection) {
@@ -488,12 +501,14 @@ public abstract class AbstractEntryList<E extends AbstractEntryList.Entry> exten
         if (isShowScrollBar && (renderScrollBar > 0 || isAlwaysShowScrollbar)) {
             var size = (int) ((float) ((this.y1 - this.y0) * (this.y1 - this.y0)) / (float) this.getMaxPosition());
             size = MathUtils.clamp(size, 32, this.y1 - this.y0);
-            var top = renderScrollBar == 0 ? 0 : ((int) this.getScrollAmount() * (this.y1 - this.y0 - size) / renderScrollBar) + this.y0;
+            // 没有可滚动内容时，滑块要停在顶端（y0）—— 之前写成 0，滑块被画到屏幕最上面去了，看不见
+            var top = renderScrollBar == 0 ? this.y0 : ((int) this.getScrollAmount() * (this.y1 - this.y0 - size) / renderScrollBar) + this.y0;
             if (top < this.y0) {
                 top = this.y0;
             }
 
-            renderer.renderRect(left, this.y0, left + width, this.y1, 0xff000000);
+            // 滚动条轨道用和列表背景一样的颜色，两块拼起来才看不出接缝
+            renderer.renderRect(left, this.y0, left + width, this.y1, 0xdc000000);
             renderer.renderRect(left, top, left + width, top + size, 0xff808080);
             renderer.renderRect(left, top, left + width - 1, top + size - 1, 0xffc0c0c0);
         }

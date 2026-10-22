@@ -67,6 +67,12 @@ Write-Host "server ready"
 foreach ($s in ($Screens -split ',')) {
     Stop-Client
     Write-Host ("=== client with debug screen: " + $s)
+    # 先记下当前已经进过几次服 —— 服务端只起一次，日志会累积，
+    # 直接 grep 'joined the game' 会把上一次的记录当成本次的，客户端窗口还没开就截图了。
+    $joinsBefore = 0
+    if (Test-Path "$ts\logs\latest.log") {
+        $joinsBefore = (Select-String -Path "$ts\logs\latest.log" -Pattern 'joined the game' | Measure-Object).Count
+    }
     Push-Location $proj
     Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', "gradlew.bat runClient -PmcDebugScreen=$s -PmcDebugGui=true `"-PmcQuickPlay=127.0.0.1:25599`" --console=plain > `"$ts\logs\gui-client-$s.log`" 2>&1") -WorkingDirectory $proj -PassThru -NoNewWindow | Out-Null
     Pop-Location
@@ -78,12 +84,13 @@ foreach ($s in ($Screens -split ',')) {
         Start-Sleep -Seconds 4
         if (Test-Path "$ts\logs\latest.log") {
             $c = Get-Content "$ts\logs\latest.log" -Raw -ErrorAction SilentlyContinue
-            if ($c -and $c -match 'joined the game') { $joined = $true; break }
+            $joinsNow = (Select-String -Path "$ts\logs\latest.log" -Pattern 'joined the game' | Measure-Object).Count
+            if ($joinsNow -gt $joinsBefore) { $joined = $true; break }
         }
     }
     Write-Host ("  joined: " + $joined)
     if (-not $joined) { Write-Host "  跳过（未进服）"; continue }
-    Start-Sleep -Seconds 6
+    Start-Sleep -Seconds 12
 
     $shot = Join-Path $out "gui-$s.png"
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'screenshot.ps1') -Out $shot
