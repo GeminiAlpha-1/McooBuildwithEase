@@ -1,4 +1,4 @@
-# McooBuildwithEase 26.2.1 —— 客户端 / 服务端实测清单
+# McooBuildwithEase 26.2.3 —— 客户端 / 服务端实测清单
 
 > 自动化自测已覆盖：服务端带 mod 起服、客户端带 mod 起服、客户端自动连服并进世界（均无 mod 相关报错）。
 > 下面是需要**真人操作**才能验证的部分（UI、建造手感、渲染观感、原版客户端进服）。
@@ -7,11 +7,11 @@
 
 | 端 | 放什么 | 备注 |
 |---|---|---|
-| 服务端 | `McooBuildwithEase-26.2.1+26.2.jar` | 放 `mods/`；**Fabric API 保持 0.153.0+26.2**、Loader 0.19.3 |
+| 服务端 | `McooBuildwithEase-26.2.3+26.2.jar` | 放 `mods/`；**Fabric API 保持 0.153.0+26.2**、Loader 0.19.3 |
 | 客户端（装了 mod 的） | 同一个 jar | 客户端 Fabric API 需 ≥ 0.153.0 |
 | 客户端（没装 mod 的） | 什么都不用装 | 用来验证「服务端独占」 |
 
-jar 位置：`D:\WorkSpace\Effortless Structure\mcoo-buildwith-ease\build\libs\McooBuildwithEase-26.2.1+26.2.jar`
+jar 位置：`D:\WorkSpace\Effortless Structure\mcoo-buildwith-ease\build\libs\McooBuildwithEase-26.2.3+26.2.jar`
 
 ## 1. 硬指标：原版客户端能进服（最关键的一条）
 
