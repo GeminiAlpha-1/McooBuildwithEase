@@ -1,0 +1,118 @@
+McooBuildwithEase
+Copyright (C) 2026 McooServers
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Lesser General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
+
+A copy of the GNU Lesser General Public License v3.0 is distributed with this
+program in the file LICENSE; the GNU General Public License v3.0 it refers to is
+distributed in the file COPYING.
+
+
+Upstream attribution
+====================
+
+McooBuildwithEase is a port of, and a derivative work of:
+
+    Effortless Structure
+    https://github.com/huskuraft/effortless
+    Copyright (C) 2023-2025 huskuraft and contributors
+    Licensed under the GNU Lesser General Public License v3.0
+
+The following parts of that project are reused here:
+
+  * The mod's business logic and data model, originally under the package
+    `dev.huskuraft.effortless`. In this repository it has been renamed to
+    `com.mcoo.buildwithease` and adapted to Minecraft 26.2.
+
+  * The `common-api` interface layer of the Universal API project,
+    https://github.com/huskuraft/universal-api, Copyright (C) 2024-2025
+    huskuraft and contributors, also licensed under the GNU Lesser General
+    Public License v3.0. It is vendored in this repository under the package
+    `dev.huskuraft.universal.api` and remains under its original license and
+    package name.
+
+  * The `universal/vanilla` and `universal/fabric` platform adapters of the
+    Universal API project, likewise vendored under `dev.huskuraft.universal`
+    and rewritten against the Minecraft 26.2 API.
+
+All upstream sources are redistributed here as source code, in full, with no
+proprietary additions layered on top of them. The upstream package name
+`dev.huskuraft.universal` is deliberately retained so that the provenance of
+every vendored file stays unambiguous.
+
+
+Changes made in this port
+==========================
+
+Minecraft 26.2 is not compatible with the 1.21.3 codebase upstream targets,
+so the platform adapters were rewritten rather than patched:
+
+  * Yarn mappings were replaced with Mojang official names; Minecraft 26.2
+    ships unobfuscated and Yarn does not cover this version.
+  * The rendering stack was migrated to the 26.2 pipeline: `RenderType`,
+    `RenderStateShard`, `MultiBufferSource`, `ShaderInstance` and `GuiGraphics`
+    no longer exist. The custom shader pipeline was dropped entirely, in line
+    with the upstream project's own configuration.
+  * The custom radial build-mode menu was replaced by a grid of buttons.
+  * Client entry points now use the Fabric API lifecycle events instead of
+    mixin-based bootstrapping. One mixin remains, for client-side input
+    interception, which has no official API equivalent.
+  * Block entity serialization moved to the `TagValueInput` / `ValueOutput`
+    interfaces, so clipboard capture and paste of block entities and container
+    contents were reworked accordingly.
+
+On top of the port, this project adds:
+
+  * Structure export to `.litematic`, Sponge Schematic v3 (`.schem`) and Axiom
+    blueprints, with an in-game file manager for choosing the destination.
+  * A three-dimensional diagonal line build mode, defined by three successive
+    clicks: start point, horizontal direction, and end height.
+  * A three-dimensional clipboard preview rendered from real block models,
+    with mouse-driven rotation, panning and zooming.
+
+The upstream `common-api` files were modified in five places. All changes are
+additive or corrective, and none of them changes an existing method signature:
+
+  * `api/renderer/Renderer.java`
+    Added `renderModelPreview`, and reworked scissor handling: Minecraft 26.2
+    scissor is a stack, so a rectangle is pushed on entry and popped on exit
+    one-to-one with the platform. The upstream implementation re-pushed the
+    parent rectangle on pop, which made the platform's stack grow without
+    bound and clipped everything after the first list entry.
+  * `api/gui/AbstractContainerWidget.java`
+    Right-button drags are now forwarded, not just left-button drags, so that
+    a widget can offer a distinct interaction per mouse button.
+  * `api/gui/container/AbstractEntryList.java`
+    The scrollbar is shown by default and its hit area matches its rendered
+    width, so the content area lines up with the panel edge.
+  * `api/gui/input/EditBox.java`
+    The selection highlight goes through `renderTextHighlight`, which uses
+    Minecraft 26.2's additive blend instead of an opaque fill.
+  * `api/platform/Entrance.java`
+    `findPlugin` returns an empty `Optional` when no plugin implementation is
+    present, instead of throwing `NoSuchElementException` and taking the
+    client down with it.
+
+Three files are new and belong to this project alone:
+
+  * `api/export/StructureExporter.java`
+  * `api/renderer/PreviewBlock.java`
+  * `api/renderer/PreviewCamera.java`
+
+
+Source code
+===========
+
+The complete corresponding source code for this program is available at:
+
+    https://github.com/GeminiAlpha-1/McooBuildwithEase
+
+The vendored upstream sources are part of that repository, so every build of
+this mod can be reproduced and modified from source.

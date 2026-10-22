@@ -3,12 +3,16 @@
     "id": "mcoo_build_with_ease",
     "version": "${version}",
     "name": "McooBuildwithEase",
-    "description": "批量建造模组：13 种建造模式、替换模式、变换器（含物品随机化器）、撤销重做、剪贴板。服务端安装即可，客户端未安装的玩家也能正常进服。",
+    "description": "面向 Minecraft 26.2 的批量建造模组：15 种建造模式、替换模式、变换器（含物品随机化器）、撤销重做、剪贴板与结构导出。服务端安装即可，客户端未安装的玩家也能正常进服。",
     "authors": [
         "McooServers"
     ],
     "license": "LGPL-3.0",
-    "contact": {},
+    "contact": {
+        "homepage": "https://github.com/GeminiAlpha-1/McooBuildwithEase",
+        "sources": "https://github.com/GeminiAlpha-1/McooBuildwithEase",
+        "issues": "https://github.com/GeminiAlpha-1/McooBuildwithEase/issues"
+    },
     "environment": "*",
     "entrypoints": {
         "main": [

@@ -96,6 +96,18 @@ processResources {
 	}
 }
 
+// 许可证随 jar 一起分发：LGPL v3 要求分发时附带许可证副本，
+// 仓库根目录的 LICENSE / COPYING / NOTICE 原样打进 jar 的 META-INF/。
+// 注意 into 必须写在 from 的闭包里 —— 写在任务层级会连 manifest 一起挪走，
+// 报 "Zip file does not contain entry (META-INF/MANIFEST.MF)"。
+tasks.withType(Jar).configureEach {
+	into("META-INF") {
+		from(rootProject.file("LICENSE"))
+		from(rootProject.file("COPYING"))
+		from(rootProject.file("NOTICE"))
+	}
+}
+
 tasks.withType(JavaCompile).configureEach {
 	// Minecraft 26.2 要求 Java 25
 	it.options.release = 25
