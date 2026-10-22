@@ -2,9 +2,12 @@
 param(
     [int]$HoldSeconds = 3,
     [int]$IdleSeconds = 3,
-    # 轮盘槽位（0 基）：0=DISABLED 1=SINGLE 2=LINE 3=SQUARE ...
+    # 方阵格子（0 基）：0=DISABLED 1=SINGLE 2=LINE 3=WALL 4=FLOOR 5=CUBOID
+    # 6=DIAGONAL_LINE 7=DIAGONAL_LINE_3D 8=DIAGONAL_WALL 9=SLOPE_FLOOR ...
     # 用 LINE(2) 才会产生批量结果 → 才会走「方块预览」渲染路径
-    [int]$Slot = 1
+    [int]$Slot = 1,
+    # 三维斜线模式：要连点三次（起点 / 水平方向 / 终点高度），不是按住
+    [switch]$Diagonal3D
 )
 $ErrorActionPreference = 'Stop'
 $proj = Split-Path -Parent $PSScriptRoot
@@ -36,7 +39,7 @@ public class Win2 {
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
-    [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint d, IntPtr e);
+    [DllImport("user32.dll")] public static extern void mouse_event(uint f, int dx, int dy, uint d, IntPtr e);
     [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);
     [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr hWnd, out RECT rect);
     [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr hWnd, ref POINT pt);
@@ -73,8 +76,19 @@ function Send-ServerCommand {
 # 服务器用 Process 起（而不是 Start-Process），这样能用控制台指令把玩家传送到大坐标 ——
 # 世界渲染的坐标偏移问题只有在世界坐标很大时才会暴露（近原点的世界看不出来）。
 Stop-Java
+# 先构建：服务器装的 jar 必须是**当前源码**的版本。
+# 否则 dev 客户端（用源码里的版本号）和服务器（用 jar 里的版本号）对不上 →
+# 命中「协议版本不匹配」，建造被静默拦掉（客户端只弹一条提示，服务端日志里连 [build] 都没有）。
+Write-Host "building..."
+Push-Location $proj
+& cmd.exe /c "gradlew.bat build --console=plain" | Out-Null
+Pop-Location
 New-Item -ItemType Directory -Force -Path "$ts\mods" | Out-Null
-$jar = Get-ChildItem "$proj\build\libs" -Filter '*.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+# 按 gradle.properties 里的 mod_version 选 jar（别用「最新修改时间」——
+# build/libs 里堆着旧版本时容易挑错，版本对不上就会被「协议版本不匹配」静默拦掉）
+$modVersion = (Select-String -Path (Join-Path $proj 'gradle.properties') -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value.Trim()
+$jar = Get-Item (Join-Path $proj "build\libs\McooBuildwithEase-$modVersion.jar")
+Write-Host ("jar = " + $jar.Name)
 Get-ChildItem "$ts\mods" -Filter '*.jar' -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike 'fabric-api*' } | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
 Copy-Item $jar.FullName "$ts\mods\$($jar.Name)" -Force
 Remove-Item "$ts\logs\latest.log" -Force -ErrorAction SilentlyContinue
@@ -243,6 +257,51 @@ function Count-Build {
 
 $before = Count-Build
 Write-Host ("build lines before      : " + $before)
+
+if ($Diagonal3D) {
+    # 三维斜线：三次点击 —— 起点 / 水平方向 / 终点高度
+    Write-Host "click 1 (起点)…"
+    [Win2]::mouse_event([Win2]::LEFTDOWN, 0, 0, 0, [IntPtr]::Zero)
+    Start-Sleep -Milliseconds 100
+    [Win2]::mouse_event([Win2]::LEFTUP, 0, 0, 0, [IntPtr]::Zero)
+    Start-Sleep -Seconds 2
+
+    Write-Host "click 2 (水平方向)…"
+    [Win2]::mouse_event([Win2]::LEFTDOWN, 0, 0, 0, [IntPtr]::Zero)
+    Start-Sleep -Milliseconds 100
+    [Win2]::mouse_event([Win2]::LEFTUP, 0, 0, 0, [IntPtr]::Zero)
+    Start-Sleep -Seconds 2
+
+    Write-Host "click 3 (终点高度)…"
+    # 把视角抬起来一点：终点高度由「视线与竖直线的交点」决定，视线变了高度才会变
+    for ($i = 0; $i -lt 4; $i++) {
+        [Win2]::mouse_event([Win2]::MOVE, 0, -25, 0, [IntPtr]::Zero)
+        Start-Sleep -Milliseconds 100
+    }
+    Start-Sleep -Seconds 1
+    [Win2]::mouse_event([Win2]::LEFTDOWN, 0, 0, 0, [IntPtr]::Zero)
+    Start-Sleep -Milliseconds 100
+    [Win2]::mouse_event([Win2]::LEFTUP, 0, 0, 0, [IntPtr]::Zero)
+    Start-Sleep -Seconds 3
+
+    $afterHold = Count-Build
+    Write-Host ("build lines after 3 clicks : " + $afterHold)
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'screenshot.ps1') -Out (Join-Path $out 'behavior-diagonal3d.png') | Out-Null
+
+    Write-Host "`n=== 判定 ==="
+    $line = Select-String -Path "$ts\logs\latest.log" -Pattern '\[build\].*DIAGONAL_LINE_3D' | Select-Object -Last 1
+    if ($line) {
+        Write-Host ("  命中: " + $line.Line)
+        Write-Host "  结论: 通过（服务端认出了三维斜线模式）"
+    } else {
+        Write-Host "  结论: 失败（服务端日志里没有 DIAGONAL_LINE_3D 的 [build] 记录）"
+    }
+    Write-Host "`n=== 服务端 [build] 日志（最后 15 条）==="
+    Select-String -Path "$ts\logs\latest.log" -Pattern '\[build\]' | Select-Object -Last 15 | ForEach-Object { "  " + $_.Line }
+    Stop-Java
+    Write-Host "done"
+    exit 0
+}
 
 # 按住左键
 [Win2]::mouse_event([Win2]::LEFTDOWN, 0, 0, 0, [IntPtr]::Zero)

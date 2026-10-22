@@ -32,7 +32,7 @@ dev.huskuraft.universal.fabric/**    Fabric 适配层：事件 / mixin / network
 | loader_version | 0.19.3 | **必须与服务器一致** |
 | fabric_api_version | 0.153.0+26.2 | **必须与服务器一致** |
 | loom_version | 1.18-SNAPSHOT | |
-| mod_version | 26.1.2+26.2 | 规则见下面「版本号规则」 |
+| mod_version | 26.2.0+26.2 | 规则见下面「版本号规则」 |
 
 ⚠️ 编译版本必须 ≤ 服务器版本：用更新的 Fabric API 编译会引入服务器没有的类/方法 → 运行时 `NoSuchMethodError`。
 
@@ -460,3 +460,72 @@ common-api 原来直接画一个普通矩形（普通 alpha 混合）→ 选中�
 所以在 `Renderer` 上加了 `renderTextHighlight(x1, y1, x2, y2, color, invert)`：
 默认实现退回普通矩形填充，26.2 适配层覆盖成原版那条路径。
 （和 `renderItemScaled` 同一个套路：common-api 给默认实现，平台层覆盖。）
+
+## 11. 建造模式（BuildMode）
+
+### 11.1 枚举只能追加，菜单顺序单独排
+
+协议里模式是**按序号**传的（`StructureSerializer` 用 `NetByteBuf#readEnum`）：
+
+```java
+byteBuf.readEnum(BuildMode.class)   // 序号，不是名字
+```
+
+在枚举中间插一个新值，会把后面所有模式的序号顶掉 —— **新客户端 + 老服务端会静默地把模式认错**
+（比如把「斜墙」当成「坡度地板」去建），比直接报错难查得多。
+
+所以规矩是：
+
+- **枚举只在末尾追加**（`BuildMode#DIAGONAL_LINE_3D` 就是这么加的）。
+- **菜单（方阵）里的排列顺序**用 `BuildMode#menuOrder()` 单独排 —— 新模式才能放进它该在的功能分组里
+  （比如三维斜线在紫色区），而不影响协议。
+
+配置那边不用管：`structureMap` 不落盘（每次从 `BuildMode.values()` 重建），
+`ContextSerializer` 里的交互点是**变长列表**（`writeList`），三点、四点都能传。
+
+### 11.2 三点结构（`traceSize = 3`）怎么写
+
+`Structure#trace(player, context, index)` 的 index = 「已经记下几个点」，
+`collect(context, index)` 的 index = 「现在有几个点」：
+
+| index | trace | collect |
+|---|---|---|
+| 0 | 起点（射线打到的方块） | — |
+| 1 | 第 2 个点 | 只有 1 个点时：单块预览 |
+| 2 | 第 3 个点 | 2 个点时：中间形态预览 |
+| 3 | — | 3 个点时：最终结构 |
+
+三维斜线（`DiagonalLine3D`）就是这么实现的：
+第 2 个点 = 视线与「起点所在水平面」的交点（只定水平方向），
+第 3 个点 = 视线与「第 2 点所在竖直线」的交点（定终点高度），
+最后从**起点**直接拉到**第 3 点** —— 真正的空间斜线。
+
+⚠️ **按住左键会自动补点**：框架的「按住连续破坏」会在每个 tick 追加一次 trace，
+所以三点结构实际是**两次点击**（第一次定起点，第二次定方向，按住的那几帧把第 3 个点补上 → 凑满三点 → 建造触发）。
+别按「三次点击」去写文档或做自动化测试。
+
+⚠️ **多点结构的点不能落在同一个方块上**：框架的交互列表是「一组互不相同的位置」
+（同位置的互相替换，见 `Context.Interactions#put`），重合的点会被去重吃掉 → 点数攒不齐 → 建造不触发。
+三维斜线的第 2 个点（水平面交点）在视线很陡时会落回起点方块里，
+所以 `DiagonalLine3D#traceGround` 遇到重合会沿视线水平方向挪一格。
+
+排查这类「点了没反应」：`tools/behavior-test.ps1 -Diagonal3D`（或开 `-Dmcoo.debugGui=true`），
+客户端日志里每次点击都会打一行：
+
+```
+[click] mode=DIAGONAL_LINE_3D idx=1 traced=BLOCK@(9, -61, 5) -> interactions=2/3
+```
+
+一眼就能看出是「没 trace 到」「被去重吃掉了」还是「点数攒不齐」。
+
+### 11.3 图标：MC 不支持 SVG
+
+- 26.2 的客户端里**没有任何 SVG 相关类**：既没有 SVG 资源类型，
+  字体系统也只有 bitmap / ttf / unihex / space 四个提供器，
+  而且 `TrueTypeGlyphProvider` **不解析 TTF 里的 SVG 表** → 「把 SVG 塞进字体」那条路在 MC 里走不通。
+- 现在的图标是 **18×18 的 PNG**、画成 **16 逻辑像素** → GUI 缩放 2 时就是 1.8 倍放大，本来就是糊的。
+- 想变清晰有两条路：
+  1. **（便宜，推荐）构建期把 SVG 光栅化成 64×64 / 128×128 的 PNG** 提交进仓库 ——
+     运行时零改动，GPU 线性过滤降采样，缩放 4 时 1:1 像素完美，视觉上等效高清矢量。
+  2. **（贵）自己解析 SVG path、用 `QuadRenderState` 画真矢量** ——
+     我们已经有自定义 GUI 元素这条路（见 6.5），但要自己写贝塞尔细分和填充/描边。

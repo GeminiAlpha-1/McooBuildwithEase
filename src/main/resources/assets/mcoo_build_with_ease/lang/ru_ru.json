@@ -190,6 +190,7 @@
   "mcoo_build_with_ease.mode.cuboid": "Кубоид",
   "mcoo_build_with_ease.mode.cylinder": "Цилиндр",
   "mcoo_build_with_ease.mode.diagonal_line": "Диагональная линия",
+  "mcoo_build_with_ease.mode.diagonal_line_3d": "3D диагональная линия",
   "mcoo_build_with_ease.mode.diagonal_wall": "Диагональная стена",
   "mcoo_build_with_ease.mode.disabled": "Отключено",
   "mcoo_build_with_ease.mode.dome": "Купол",

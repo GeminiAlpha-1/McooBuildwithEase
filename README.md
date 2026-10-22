@@ -49,6 +49,7 @@
 - **Wall** 沿 X 或 Z 轴画墙
 - **Floor** 沿 Y 轴画地板
 - **Diagonal Line** 任意角度的斜线
+- **3D Diagonal Line** 三维斜线（三次点击：起点 → 水平方向 → 终点高度）
 - **Diagonal Wall** 任意角度的斜墙
 - **Slope Floor** 任意角度的斜地板
 - **Cube** 立方体

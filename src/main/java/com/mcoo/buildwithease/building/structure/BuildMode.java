@@ -1,6 +1,7 @@
 package com.mcoo.buildwithease.building.structure;
 
 import java.awt.*;
+import java.util.List;
 
 import com.mcoo.buildwithease.McooBuildwithEase;
 import dev.huskuraft.universal.api.core.ResourceLocation;
@@ -12,6 +13,7 @@ import com.mcoo.buildwithease.building.structure.builder.standard.Cone;
 import com.mcoo.buildwithease.building.structure.builder.standard.Cuboid;
 import com.mcoo.buildwithease.building.structure.builder.standard.Cylinder;
 import com.mcoo.buildwithease.building.structure.builder.standard.DiagonalLine;
+import com.mcoo.buildwithease.building.structure.builder.standard.DiagonalLine3D;
 import com.mcoo.buildwithease.building.structure.builder.standard.DiagonalWall;
 import com.mcoo.buildwithease.building.structure.builder.standard.Disable;
 import com.mcoo.buildwithease.building.structure.builder.standard.Floor;
@@ -42,6 +44,16 @@ public enum BuildMode {
 
     PYRAMID("pyramid", new Pyramid(), Category.ROOF, BuildFeatures.PLANE_FILLING, BuildFeatures.PLANE_LENGTH),
     CONE("cone", new Cone(), Category.ROOF, BuildFeatures.CIRCLE_START),
+
+    /**
+     * 三维斜线（三次点击：起点 → 水平方向 → 终点高度）。
+     * <p>
+     * ⚠️ **只能追加在枚举末尾**：协议用的是枚举序号（{@code NetByteBuf#readEnum}），
+     * 插在中间会把后面所有模式的序号顶掉 —— 新客户端 + 老服务端会**静默地**把模式认错
+     * （比如把「斜墙」当成「坡度地板」去建），比直接报错还难查。
+     * 菜单（方阵）里的排列顺序看 {@link #menuOrder()}，跟枚举顺序是两回事。
+     */
+    DIAGONAL_LINE_3D("diagonal_line_3d", new DiagonalLine3D(), Category.DIAGONAL),
     ;
 
 //    DOME("dome", new Dome(), Category.ROOF);
@@ -93,6 +105,22 @@ public enum BuildMode {
 
     public ResourceLocation getIcon() {
         return ResourceLocation.of(McooBuildwithEase.MOD_ID, "textures/mode/%s.png".formatted(name));
+    }
+
+    /**
+     * 建造模式菜单（方阵）里的排列顺序。
+     * <p>
+     * 故意和枚举声明顺序<strong>不一样</strong>：协议用枚举序号，所以枚举只能追加
+     * （见 {@link #DIAGONAL_LINE_3D} 的注释）；但菜单里新模式要放进它该在的功能分组里。
+     */
+    public static List<BuildMode> menuOrder() {
+        return List.of(
+                DISABLED, SINGLE,
+                LINE, WALL, FLOOR, CUBOID,
+                DIAGONAL_LINE, DIAGONAL_LINE_3D, DIAGONAL_WALL, SLOPE_FLOOR,
+                CIRCLE, CYLINDER, SPHERE,
+                PYRAMID, CONE
+        );
     }
 
     public boolean isDisabled() {

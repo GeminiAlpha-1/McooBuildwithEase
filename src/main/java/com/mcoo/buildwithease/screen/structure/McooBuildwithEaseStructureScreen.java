@@ -22,6 +22,7 @@ import com.mcoo.buildwithease.building.replace.Replace;
 import com.mcoo.buildwithease.building.replace.ReplaceStrategy;
 import com.mcoo.buildwithease.building.settings.Misc;
 import com.mcoo.buildwithease.building.structure.BuildFeature;
+import com.mcoo.buildwithease.building.structure.BuildMode;
 import com.mcoo.buildwithease.building.structure.builder.Structure;
 import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseClipboardScreen;
 import com.mcoo.buildwithease.screen.pattern.McooBuildwithEasePatternScreen;
@@ -263,7 +264,11 @@ public class McooBuildwithEaseStructureScreen extends AbstractGridScreen<Structu
     public void onReload() {
         passiveModeTextWidget.setVisible(getEntrance().getConfigStorage().get().builderConfig().passiveMode());
 
-        setSlots(getEntrance().getConfigStorage().get().structureMap().values().stream().map(McooBuildwithEaseStructureScreen::slot).toList());
+        // 方阵里的排列顺序用 BuildMode#menuOrder()（和枚举声明顺序不是一回事：
+        // 协议用枚举序号，枚举只能追加；菜单顺序单独排，新模式才能放进它该在的功能分组里）
+        setSlots(BuildMode.menuOrder().stream()
+                .map(mode -> slot(getEntrance().getConfigStorage().get().getStructure(mode)))
+                .toList());
 
         var structure = getEntrance().getStructureBuilder().getContext(getPlayer()).structure();
 //        var structure = getEntrance().getStructureBuilder().getContext(getPlayer()).structure();

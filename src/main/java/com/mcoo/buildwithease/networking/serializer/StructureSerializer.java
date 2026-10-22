@@ -19,6 +19,7 @@ import com.mcoo.buildwithease.building.structure.builder.standard.Cone;
 import com.mcoo.buildwithease.building.structure.builder.standard.Cuboid;
 import com.mcoo.buildwithease.building.structure.builder.standard.Cylinder;
 import com.mcoo.buildwithease.building.structure.builder.standard.DiagonalLine;
+import com.mcoo.buildwithease.building.structure.builder.standard.DiagonalLine3D;
 import com.mcoo.buildwithease.building.structure.builder.standard.DiagonalWall;
 import com.mcoo.buildwithease.building.structure.builder.standard.Disable;
 import com.mcoo.buildwithease.building.structure.builder.standard.Floor;
@@ -48,6 +49,7 @@ public class StructureSerializer implements NetByteBufSerializer<Structure> {
             case SPHERE -> new Sphere();
             case PYRAMID -> new Pyramid();
             case CONE -> new Cone();
+            case DIAGONAL_LINE_3D -> new DiagonalLine3D();
         }).withFeatures(byteBuf.readList(new BuildFeatureReader()));
     }
 

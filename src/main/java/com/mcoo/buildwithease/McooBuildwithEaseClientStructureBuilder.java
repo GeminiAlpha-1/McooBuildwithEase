@@ -374,6 +374,15 @@ public final class McooBuildwithEaseClientStructureBuilder extends StructureBuil
             var interaction = context.withBuildState(state).trace(player);
             var nextContext = context.withBuildState(state).withNextInteraction(interaction);
 
+            if (Boolean.getBoolean("mcoo.debugGui")) {
+                McooBuildwithEase.LOGGER.info("[click] mode={} idx={} traced={} -> interactions={}/{}",
+                        context.buildMode(),
+                        context.interactionsSize(),
+                        interaction == null ? "null" : (interaction.getTarget() + "@" + interaction.getBlockPosition()),
+                        nextContext.interactionsSize(),
+                        context.structure().traceSize(context));
+            }
+
             if (interaction == null) {
                 return context.newInteraction();
             }

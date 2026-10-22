@@ -40,7 +40,8 @@ jar 位置：`D:\WorkSpace\Effortless Structure\mcoo-buildwith-ease\build\libs\M
 - [ ] Disable（按原版方式放置）
 - [ ] Single（加长放置距离）
 - [ ] Line / Wall / Floor（三轴向）
-- [ ] Diagonal Line / Diagonal Wall / Slope Floor（任意角度）
+- [ ] Diagonal Line / **3D Diagonal Line**（三维斜线：连点三次 —— 起点 → 水平方向 → 终点高度）
+- [ ] Diagonal Wall / Slope Floor（任意角度）
 - [ ] Cube / Circle / Cylinder / Sphere / Pyramid / Cone
 
 每个模式都要试：**空地放置**、**已有方块处放置**、**放置后撤销/重做**。

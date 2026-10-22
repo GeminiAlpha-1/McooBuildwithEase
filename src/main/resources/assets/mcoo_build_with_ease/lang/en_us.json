@@ -190,6 +190,7 @@
   "mcoo_build_with_ease.mode.cuboid": "Cube",
   "mcoo_build_with_ease.mode.cylinder": "Cylinder",
   "mcoo_build_with_ease.mode.diagonal_line": "Diagonal Line",
+  "mcoo_build_with_ease.mode.diagonal_line_3d": "3D Diagonal Line",
   "mcoo_build_with_ease.mode.diagonal_wall": "Diagonal Wall",
   "mcoo_build_with_ease.mode.disabled": "Disabled",
   "mcoo_build_with_ease.mode.dome": "Dome",
