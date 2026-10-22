@@ -485,14 +485,32 @@ public abstract class Renderer {
      * <p>
      * 默认实现什么都不画（平台不支持 3D 预览时）。
      *
-     * @param blocks  要画的方块
-     * @param camera  相机参数
-     * @param x       视口左上角
-     * @param y       视口左上角
-     * @param width   视口宽度
-     * @param height  视口高度
+     * @param mesh   已剔除的网格（见 {@link #buildPreviewMesh}）
+     * @param camera 相机参数
+     * @param x      视口左上角
+     * @param y      视口左上角
+     * @param width  视口宽度
+     * @param height 视口高度
      */
-    public void renderModelPreview(List<PreviewBlock> blocks, PreviewCamera camera, int x, int y, int width, int height) {
+    public void renderModelPreview(PreviewMesh mesh, PreviewCamera camera, int x, int y, int width, int height) {
+    }
+
+    /**
+     * 构建一个做过剔除的三维预览网格。
+     * <p>
+     * 剔除包含两部分，都与相机无关，因此结果可以缓存：
+     * <ul>
+     *   <li><b>邻接面遮挡</b>：两个相邻方块之间的面看不见（被其中一个挡住）——
+     *       和原版渲染区块时用的是同一套判定（{@code Block.shouldRenderFace}）。
+     *       实心结构里这一项能砍掉约 90% 的面。</li>
+     *   <li><b>整块剔除</b>：被六个不透明方块完全包住的方块，整个都看不见。</li>
+     * </ul>
+     * 默认实现返回一个空网格（平台不支持 3D 预览时）。
+     *
+     * @param blocks 要画的方块
+     */
+    public PreviewMesh buildPreviewMesh(List<PreviewBlock> blocks) {
+        return PreviewMesh.EMPTY;
     }
 
     public abstract void renderBlockState(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockState blockState);

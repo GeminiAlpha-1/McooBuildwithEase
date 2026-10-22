@@ -18,6 +18,7 @@ import dev.huskuraft.universal.api.renderer.MatrixStack;
 import dev.huskuraft.universal.api.renderer.OverlayTexture;
 import dev.huskuraft.universal.api.renderer.PreviewBlock;
 import dev.huskuraft.universal.api.renderer.PreviewCamera;
+import dev.huskuraft.universal.api.renderer.PreviewMesh;
 import dev.huskuraft.universal.api.renderer.RenderLayer;
 import dev.huskuraft.universal.api.renderer.Renderer;
 import dev.huskuraft.universal.api.text.Text;
@@ -366,8 +367,116 @@ public class MinecraftRenderer extends Renderer {
     private static Object lastBlockAtlasView;
 
     @Override
-    public void renderModelPreview(List<PreviewBlock> blocks, PreviewCamera camera, int x, int y, int width, int height) {
-        if (graphics == null || blocks.isEmpty() || width <= 0 || height <= 0) {
+    public PreviewMesh buildPreviewMesh(List<PreviewBlock> blocks) {
+        if (blocks == null || blocks.isEmpty()) {
+            return PreviewMesh.EMPTY;
+        }
+
+        var minecraft = Minecraft.getInstance();
+        var atlasTexture = minecraft.getTextureManager().getTexture(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+        if (lastBlockAtlasView != atlasTexture.getTextureView()) {
+            lastBlockAtlasView = atlasTexture.getTextureView();
+            MODEL_FACE_CACHE.clear();
+        }
+        var modelManager = minecraft.getModelManager();
+        var random = net.minecraft.util.RandomSource.createThreadLocalInstance(0);
+
+        // 结构中心（用方块格的范围，格心在 +0.5）
+        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+        // 位置 → 方块状态：用来做邻接查询（判断某个面被相邻方块挡住没有）
+        var lookup = new java.util.HashMap<Long, net.minecraft.world.level.block.state.BlockState>(blocks.size() * 2);
+        for (var block : blocks) {
+            var state = (net.minecraft.world.level.block.state.BlockState) block.state().reference();
+            if (state == null) {
+                continue;
+            }
+            lookup.put(packPosition(block.position().x(), block.position().y(), block.position().z()), state);
+            minX = Math.min(minX, block.position().x());
+            maxX = Math.max(maxX, block.position().x());
+            minY = Math.min(minY, block.position().y());
+            maxY = Math.max(maxY, block.position().y());
+            minZ = Math.min(minZ, block.position().z());
+            maxZ = Math.max(maxZ, block.position().z());
+        }
+        if (lookup.isEmpty()) {
+            return PreviewMesh.EMPTY;
+        }
+        var centerX = (minX + maxX + 1) / 2.0;
+        var centerY = (minY + maxY + 1) / 2.0;
+        var centerZ = (minZ + maxZ + 1) / 2.0;
+
+        // 1) 逐块取模型面，并剔除被相邻方块挡住的面
+        var faces = new java.util.ArrayList<PreviewMesh.PreviewFace>();
+        int totalFaces = 0;
+        int culledFaces = 0;
+        for (var block : blocks) {
+            var state = (net.minecraft.world.level.block.state.BlockState) block.state().reference();
+            if (state == null) {
+                continue;
+            }
+            for (var face : getModelFaces(state, modelManager, random)) {
+                totalFaces++;
+                // 【邻接面剔除】和原版渲染区块时是同一套判定：
+                // 某个方向上相邻的方块若把这个面完全挡住，这个面就不画。
+                // 实心结构里这一项能砍掉约 90% 的面（内部面根本看不见）。
+                var direction = directionOf(face.nx(), face.ny(), face.nz());
+                if (direction == null) {
+                    continue;
+                }
+                var neighbor = lookup.get(packPosition(
+                        block.position().x() + direction.getStepX(),
+                        block.position().y() + direction.getStepY(),
+                        block.position().z() + direction.getStepZ()));
+                if (neighbor != null && !net.minecraft.world.level.block.Block.shouldRenderFace(state, neighbor, direction)) {
+                    culledFaces++;
+                    continue;
+                }
+                // 顶点位置平移到方块在结构里的位置（相对结构中心）
+                var positions = new float[12];
+                for (int i = 0; i < 4; i++) {
+                    positions[i * 3] = (float) (block.position().x() + face.positions()[i * 3] - centerX);
+                    positions[i * 3 + 1] = (float) (block.position().y() + face.positions()[i * 3 + 1] - centerY);
+                    positions[i * 3 + 2] = (float) (block.position().z() + face.positions()[i * 3 + 2] - centerZ);
+                }
+                faces.add(new PreviewMesh.PreviewFace(
+                        positions, face.uvs().clone(),
+                        face.u0(), face.v0(), face.u1(), face.v1(),
+                        face.tint(),
+                        face.nx(), face.ny(), face.nz()));
+            }
+        }
+
+        if (MinecraftBufferSource.DEBUG) {
+            LOGGER.info("[preview] blocks={} faces={} culled={} visible={}",
+                    lookup.size(), totalFaces, culledFaces, faces.size());
+        }
+
+        return new PreviewMesh(
+                List.copyOf(faces),
+                (float) centerX, (float) centerY, (float) centerZ,
+                (float) minX, (float) minY, (float) minZ,
+                (float) maxX, (float) maxY, (float) maxZ);
+    }
+
+    /** 把方块坐标打包成一个 long，用作位置索引表的键。 */
+    private static long packPosition(int x, int y, int z) {
+        return ((long) x & 0x3FFFFFFL) << 38 | ((long) z & 0x3FFFFFFL) << 12 | ((long) y & 0xFFFL);
+    }
+
+    /** 面的法线 → 方向（用于邻接查询）。 */
+    private static net.minecraft.core.Direction directionOf(float nx, float ny, float nz) {
+        for (var direction : net.minecraft.core.Direction.values()) {
+            if (direction.getStepX() == nx && direction.getStepY() == ny && direction.getStepZ() == nz) {
+                return direction;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void renderModelPreview(PreviewMesh mesh, PreviewCamera camera, int x, int y, int width, int height) {
+        if (graphics == null || mesh == null || mesh.isEmpty() || width <= 0 || height <= 0) {
             return;
         }
         flushPending();
@@ -379,75 +488,46 @@ public class MinecraftRenderer extends Renderer {
             MODEL_FACE_CACHE.clear();
         }
         var textureSetup = net.minecraft.client.gui.render.TextureSetup.singleTexture(atlasTexture.getTextureView(), atlasTexture.getSampler());
-        var modelManager = minecraft.getModelManager();
-        var random = net.minecraft.util.RandomSource.createThreadLocalInstance(0);
-
-        // 结构中心（用方块格的范围，格心在 +0.5）
-        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
-        double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
-        for (var block : blocks) {
-            minX = Math.min(minX, block.position().x());
-            maxX = Math.max(maxX, block.position().x());
-            minY = Math.min(minY, block.position().y());
-            maxY = Math.max(maxY, block.position().y());
-            minZ = Math.min(minZ, block.position().z());
-            maxZ = Math.max(maxZ, block.position().z());
-        }
-        var centerX = (minX + maxX + 1) / 2.0;
-        var centerY = (minY + maxY + 1) / 2.0;
-        var centerZ = (minZ + maxZ + 1) / 2.0;
 
         var yaw = Math.toRadians(camera.yaw());
         var pitch = Math.toRadians(camera.pitch());
-        var cosY = Math.cos(yaw);
-        var sinY = Math.sin(yaw);
-        var cosX = Math.cos(pitch);
-        var sinX = Math.sin(pitch);
+        float cosY = (float) Math.cos(yaw);
+        float sinY = (float) Math.sin(yaw);
+        float cosX = (float) Math.cos(pitch);
+        float sinX = (float) Math.sin(pitch);
 
-        // 1) 取模型面，旋转到相机空间
-        var faces = new java.util.ArrayList<ModelFace>();
-        var parts = new java.util.ArrayList<net.minecraft.client.renderer.block.dispatch.BlockStateModelPart>();
-        for (var block : blocks) {
-            var state = (net.minecraft.world.level.block.state.BlockState) block.state().reference();
-            if (state == null) {
+        // 1) 旋转到相机空间 + 背面剔除
+        var faces = new java.util.ArrayList<PreviewMesh.PreviewFace>(mesh.faces().size());
+        for (var face : mesh.faces()) {
+            var positions = face.positions();
+            var nx = face.nx() * cosY + face.nz() * sinY;
+            var nz = -face.nx() * sinY + face.nz() * cosY;
+            var ny = face.ny() * cosX - nz * sinX;
+            nz = face.ny() * sinX + nz * cosX;
+            // 背面剔除：法线背对相机的面不画
+            if (nz <= 0.0F) {
                 continue;
             }
-            for (var face : getModelFaces(state, modelManager, random)) {
-                var positions = new float[12];
-                var normals = new float[3];
-                var depth = 0.0;
-                for (int i = 0; i < 4; i++) {
-                    var local = face.positions();
-                    var wx = block.position().x() + local[i * 3] - centerX;
-                    var wy = block.position().y() + local[i * 3 + 1] - centerY;
-                    var wz = block.position().z() + local[i * 3 + 2] - centerZ;
-                    // 绕 Y 轴
-                    var rx = wx * cosY + wz * sinY;
-                    var rz = -wx * sinY + wz * cosY;
-                    // 绕 X 轴
-                    var ry = wy * cosX - rz * sinX;
-                    rz = wy * sinX + rz * cosX;
-                    positions[i * 3] = (float) rx;
-                    positions[i * 3 + 1] = (float) ry;
-                    positions[i * 3 + 2] = (float) rz;
-                    depth += rz;
-                    if (i == 0) {
-                        var nx = face.nx() * cosY + face.nz() * sinY;
-                        var nz = -face.nx() * sinY + face.nz() * cosY;
-                        var ny = face.ny() * cosX - nz * sinX;
-                        nz = face.ny() * sinX + nz * cosX;
-                        normals[0] = (float) nx;
-                        normals[1] = (float) ny;
-                        normals[2] = (float) nz;
-                    }
-                }
-                // 背面剔除：法线背对相机的面不画
-                if (normals[2] <= 0.0F) {
-                    continue;
-                }
-                faces.add(new ModelFace(positions, face.uvs(), face.u0(), face.v0(), face.u1(), face.v1(),
-                        face.tint(), normals[0], normals[1], normals[2]));
+            var rotated = new float[12];
+            for (int i = 0; i < 4; i++) {
+                var wx = positions[i * 3];
+                var wy = positions[i * 3 + 1];
+                var wz = positions[i * 3 + 2];
+                // 绕 Y 轴
+                var rx = wx * cosY + wz * sinY;
+                var rz = -wx * sinY + wz * cosY;
+                // 绕 X 轴
+                var ry = wy * cosX - rz * sinX;
+                rz = wy * sinX + rz * cosX;
+                rotated[i * 3] = rx;
+                rotated[i * 3 + 1] = ry;
+                rotated[i * 3 + 2] = rz;
             }
+            faces.add(new PreviewMesh.PreviewFace(
+                    rotated, face.uvs(),
+                    face.u0(), face.v0(), face.u1(), face.v1(),
+                    face.tint(),
+                    nx, ny, nz));
         }
         if (faces.isEmpty()) {
             return;
@@ -542,7 +622,7 @@ public class MinecraftRenderer extends Renderer {
         return (sx[1] - sx[0]) * (sy[2] - sy[0]) - (sx[2] - sx[0]) * (sy[1] - sy[0]);
     }
 
-    private static float depthOf(ModelFace face) {
+    private static float depthOf(PreviewMesh.PreviewFace face) {
         var positions = face.positions();
         float depth = 0.0F;
         for (int i = 0; i < 4; i++) {
@@ -552,12 +632,12 @@ public class MinecraftRenderer extends Renderer {
     }
 
     /** 贴图内坐标（0~1）→ 方块图集里的 u。 */
-    private static float spriteU(ModelFace face, float u) {
+    private static float spriteU(PreviewMesh.PreviewFace face, float u) {
         return face.u0() + (face.u1() - face.u0()) * u;
     }
 
     /** 贴图内坐标（0~1）→ 方块图集里的 v。 */
-    private static float spriteV(ModelFace face, float v) {
+    private static float spriteV(PreviewMesh.PreviewFace face, float v) {
         return face.v0() + (face.v1() - face.v0()) * v;
     }
 

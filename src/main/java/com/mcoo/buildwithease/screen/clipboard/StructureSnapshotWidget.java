@@ -29,6 +29,15 @@ public final class StructureSnapshotWidget extends AbstractWidget {
     private static final float MAX_ZOOM = 8.0F;
 
     private Snapshot snapshot;
+    /**
+     * 剔除后的预览网格。
+     * <p>
+     * 剔除（相邻面遮挡、整块剔除）与相机无关，只取决于结构本身，
+     * 所以网格只在结构变化时重建一次，之后每帧只做投影。
+     */
+    private dev.huskuraft.universal.api.renderer.PreviewMesh mesh;
+    /** 网格对应的结构指纹，用来判断是否需要重建。 */
+    private int meshFingerprint;
     /** 相机：偏航角（度）。 */
     private float yaw = 45.0F;
     /** 相机：俯仰角（度）。 */
@@ -56,18 +65,42 @@ public final class StructureSnapshotWidget extends AbstractWidget {
         if (snapshot == null || snapshot.isEmpty()) {
             return;
         }
-        var blocks = snapshot.blockData().stream()
-                .filter(blockData -> blockData.blockState() != null)
-                .map(blockData -> new PreviewBlock(blockData.blockPosition(), blockData.blockState()))
-                .toList();
-        if (blocks.isEmpty()) {
+        // 网格只在结构变化时重建（剔除结果与相机无关，可以缓存）
+        var fingerprint = fingerprintOf(snapshot);
+        if (mesh == null || meshFingerprint != fingerprint) {
+            var blocks = snapshot.blockData().stream()
+                    .filter(blockData -> blockData.blockState() != null)
+                    .map(blockData -> new PreviewBlock(blockData.blockPosition(), blockData.blockState()))
+                    .toList();
+            mesh = renderer.buildPreviewMesh(blocks);
+            meshFingerprint = fingerprint;
+        }
+        if (mesh.isEmpty()) {
             return;
         }
 
         // 裁剪由预览元素自己的 scissorArea() 负责（自己提交的 GUI 元素不吃全局裁剪），
         // 这里不要再 pushScissor —— 全局裁剪和元素裁剪叠加会把边界算错。
-        renderer.renderModelPreview(blocks, new PreviewCamera(yaw, pitch, zoom, panX, panY),
+        renderer.renderModelPreview(mesh, new PreviewCamera(yaw, pitch, zoom, panX, panY),
                 getLeft(), getTop(), getWidth(), getHeight());
+    }
+
+    /**
+     * 结构的指纹：方块数 + 各方块坐标与状态的哈希。
+     * <p>
+     * 用来判断「结构有没有变」——变了才重建网格。
+     * 坐标和状态都参与哈希，所以挪动一格或换一种方块都会触发重建。
+     */
+    private static int fingerprintOf(Snapshot snapshot) {
+        var hash = 17;
+        for (var blockData : snapshot.blockData()) {
+            var position = blockData.blockPosition();
+            hash = hash * 31 + position.x();
+            hash = hash * 31 + position.y();
+            hash = hash * 31 + position.z();
+            hash = hash * 31 + (blockData.blockState() == null ? 0 : blockData.blockState().hashCode());
+        }
+        return hash;
     }
 
     @Override
@@ -124,6 +157,8 @@ public final class StructureSnapshotWidget extends AbstractWidget {
     }
 
     public void setSnapshot(Snapshot snapshot) {
+        // 不在这里清空网格：onReload 每帧都会调到这里，
+        // 是否需要重建由 renderWidget 里的结构指纹比对决定。
         this.snapshot = snapshot;
     }
 }

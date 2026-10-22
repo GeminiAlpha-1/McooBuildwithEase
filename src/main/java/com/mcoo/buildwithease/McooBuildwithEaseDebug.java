@@ -67,6 +67,28 @@ final class McooBuildwithEaseDebug {
                             true, new com.mcoo.buildwithease.building.clipboard.Snapshot("debug", 0, blocks)));
                     new McooBuildwithEaseClipboardScreen(entrance).attach();
                 }
+                case "clipboard-big" -> {
+                    // 大结构压力测试：实心 32x32x32 = 32768 块。
+                    // 实心结构的内部面全被相邻方块挡住，邻接剔除后只剩表面 6144 个面。
+                    // 用来验证剔除是否真的生效、以及大结构下预览还能不能流畅拖动。
+                    var builder = entrance.getStructureBuilder();
+                    var player = entrance.getClient().getPlayer();
+                    var blocks = new java.util.ArrayList<com.mcoo.buildwithease.building.clipboard.BlockData>();
+                    var state = dev.huskuraft.universal.api.core.Items.STONE.item().getBlock().getDefaultBlockState();
+                    for (int x = 0; x < 32; x++) {
+                        for (int y = 0; y < 32; y++) {
+                            for (int z = 0; z < 32; z++) {
+                                blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                        new dev.huskuraft.universal.api.core.BlockPosition(x, y, z),
+                                        state,
+                                        null));
+                            }
+                        }
+                    }
+                    builder.setClipboard(player, new com.mcoo.buildwithease.building.clipboard.Clipboard(
+                            true, new com.mcoo.buildwithease.building.clipboard.Snapshot("debug-big", 0, blocks)));
+                    new McooBuildwithEaseClipboardScreen(entrance).attach();
+                }
                 case "radial" -> new McooBuildwithEaseStructureScreen(entrance, McooBuildwithEaseKeys.BUILD_MODE_RADIAL.getKeyBinding()).attach();
                 case "general" -> new McooBuildwithEaseGeneralSettingsScreen(entrance).attach();
                 case "pattern" -> {
