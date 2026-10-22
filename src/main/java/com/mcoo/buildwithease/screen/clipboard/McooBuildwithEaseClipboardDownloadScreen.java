@@ -114,7 +114,11 @@ public class McooBuildwithEaseClipboardDownloadScreen extends AbstractPanelScree
                 .toList();
 
         var exporter = PlatformLoader.getSingleton(StructureExporter.class);
-        var name = snapshot.name() == null || snapshot.name().isBlank() ? "structure" : snapshot.name();
+        // 捕捉出来的快照没有名字（上游就是空串），这里补一个带时间戳的，
+        // 免得每次导出都写成同一个文件、把上一次的覆盖掉
+        var name = snapshot.name() == null || snapshot.name().isBlank()
+                ? "structure_" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                : snapshot.name();
         return exporter.export(name, sizeX, sizeY, sizeZ, List.copyOf(blocks), format);
     }
 
