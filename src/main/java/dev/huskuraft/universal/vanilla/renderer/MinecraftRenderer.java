@@ -16,6 +16,8 @@ import dev.huskuraft.universal.api.renderer.BufferSource;
 import dev.huskuraft.universal.api.renderer.LightTexture;
 import dev.huskuraft.universal.api.renderer.MatrixStack;
 import dev.huskuraft.universal.api.renderer.OverlayTexture;
+import dev.huskuraft.universal.api.renderer.PreviewBlock;
+import dev.huskuraft.universal.api.renderer.PreviewCamera;
 import dev.huskuraft.universal.api.renderer.RenderLayer;
 import dev.huskuraft.universal.api.renderer.Renderer;
 import dev.huskuraft.universal.api.text.Text;
@@ -349,6 +351,280 @@ public class MinecraftRenderer extends Renderer {
     }
 
     /**
+     * 方块模型细分出来的一个面（贴图 + 顶点）。
+     * <p>
+     * 位置是方块局部坐标（0~1），UV 是贴图内坐标（0~1），
+     * 图集矩形是这个面用的贴图在方块图集里的范围。
+     */
+    private record ModelFace(float[] positions, float[] uvs, float u0, float v0, float u1, float v1,
+                             int tint, float nx, float ny, float nz) {
+    }
+
+    /** 方块状态 → 它的模型面（跨帧缓存，资源重载后清空）。 */
+    private static final java.util.Map<net.minecraft.world.level.block.state.BlockState, List<ModelFace>> MODEL_FACE_CACHE = new java.util.HashMap<>();
+    /** 上次用的方块图集纹理；资源重载后图集会换，缓存里的 UV 矩形就失效了。 */
+    private static Object lastBlockAtlasView;
+
+    @Override
+    public void renderModelPreview(List<PreviewBlock> blocks, PreviewCamera camera, int x, int y, int width, int height) {
+        if (graphics == null || blocks.isEmpty() || width <= 0 || height <= 0) {
+            return;
+        }
+        flushPending();
+
+        var minecraft = Minecraft.getInstance();
+        var atlasTexture = minecraft.getTextureManager().getTexture(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+        if (lastBlockAtlasView != atlasTexture.getTextureView()) {
+            lastBlockAtlasView = atlasTexture.getTextureView();
+            MODEL_FACE_CACHE.clear();
+        }
+        var textureSetup = net.minecraft.client.gui.render.TextureSetup.singleTexture(atlasTexture.getTextureView(), atlasTexture.getSampler());
+        var modelManager = minecraft.getModelManager();
+        var random = net.minecraft.util.RandomSource.createThreadLocalInstance(0);
+
+        // 结构中心（用方块格的范围，格心在 +0.5）
+        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+        for (var block : blocks) {
+            minX = Math.min(minX, block.position().x());
+            maxX = Math.max(maxX, block.position().x());
+            minY = Math.min(minY, block.position().y());
+            maxY = Math.max(maxY, block.position().y());
+            minZ = Math.min(minZ, block.position().z());
+            maxZ = Math.max(maxZ, block.position().z());
+        }
+        var centerX = (minX + maxX + 1) / 2.0;
+        var centerY = (minY + maxY + 1) / 2.0;
+        var centerZ = (minZ + maxZ + 1) / 2.0;
+
+        var yaw = Math.toRadians(camera.yaw());
+        var pitch = Math.toRadians(camera.pitch());
+        var cosY = Math.cos(yaw);
+        var sinY = Math.sin(yaw);
+        var cosX = Math.cos(pitch);
+        var sinX = Math.sin(pitch);
+
+        // 1) 取模型面，旋转到相机空间
+        var faces = new java.util.ArrayList<ModelFace>();
+        var parts = new java.util.ArrayList<net.minecraft.client.renderer.block.dispatch.BlockStateModelPart>();
+        for (var block : blocks) {
+            var state = (net.minecraft.world.level.block.state.BlockState) block.state().reference();
+            if (state == null) {
+                continue;
+            }
+            for (var face : getModelFaces(state, modelManager, random)) {
+                var positions = new float[12];
+                var normals = new float[3];
+                var depth = 0.0;
+                for (int i = 0; i < 4; i++) {
+                    var local = face.positions();
+                    var wx = block.position().x() + local[i * 3] - centerX;
+                    var wy = block.position().y() + local[i * 3 + 1] - centerY;
+                    var wz = block.position().z() + local[i * 3 + 2] - centerZ;
+                    // 绕 Y 轴
+                    var rx = wx * cosY + wz * sinY;
+                    var rz = -wx * sinY + wz * cosY;
+                    // 绕 X 轴
+                    var ry = wy * cosX - rz * sinX;
+                    rz = wy * sinX + rz * cosX;
+                    positions[i * 3] = (float) rx;
+                    positions[i * 3 + 1] = (float) ry;
+                    positions[i * 3 + 2] = (float) rz;
+                    depth += rz;
+                    if (i == 0) {
+                        var nx = face.nx() * cosY + face.nz() * sinY;
+                        var nz = -face.nx() * sinY + face.nz() * cosY;
+                        var ny = face.ny() * cosX - nz * sinX;
+                        nz = face.ny() * sinX + nz * cosX;
+                        normals[0] = (float) nx;
+                        normals[1] = (float) ny;
+                        normals[2] = (float) nz;
+                    }
+                }
+                // 背面剔除：法线背对相机的面不画
+                if (normals[2] <= 0.0F) {
+                    continue;
+                }
+                faces.add(new ModelFace(positions, face.uvs(), face.u0(), face.v0(), face.u1(), face.v1(),
+                        face.tint(), normals[0], normals[1], normals[2]));
+            }
+        }
+        if (faces.isEmpty()) {
+            return;
+        }
+
+        // 2) 旋转后的包围盒 → 缩放（1 = 正好铺满视口）
+        float minSx = Float.MAX_VALUE, minSy = Float.MAX_VALUE, maxSx = -Float.MAX_VALUE, maxSy = -Float.MAX_VALUE;
+        for (var face : faces) {
+            var positions = face.positions();
+            for (int i = 0; i < 4; i++) {
+                minSx = Math.min(minSx, positions[i * 3]);
+                maxSx = Math.max(maxSx, positions[i * 3]);
+                minSy = Math.min(minSy, positions[i * 3 + 1]);
+                maxSy = Math.max(maxSy, positions[i * 3 + 1]);
+            }
+        }
+        var scale = Math.min(width / Math.max(1.0F, maxSx - minSx), height / Math.max(1.0F, maxSy - minSy)) * 0.92F * camera.zoom();
+        scale = Math.max(scale, 0.01F);
+        var originX = x + width / 2.0F + camera.panX();
+        var originY = y + height / 2.0F + camera.panY();
+
+        // 3) 投影成屏幕坐标并提交（画家算法：远的先画）
+        //    裁剪矩形 = 预览区（经当前 2D 矩阵变换后）——
+        //    自己提交的 GUI 元素只认自己的 scissorArea()，不吃 graphics.enableScissor 那套全局裁剪，
+        //    所以缩放/平移把模型顶出预览区时，必须由元素自己裁掉。
+        var scissorTopLeft = transformGuiFloat(x, y);
+        var scissorBottomRight = transformGuiFloat(x + width, y + height);
+        var scissorRect = new net.minecraft.client.gui.navigation.ScreenRectangle(
+                (int) Math.floor(Math.min(scissorTopLeft[0], scissorBottomRight[0])),
+                (int) Math.floor(Math.min(scissorTopLeft[1], scissorBottomRight[1])),
+                (int) Math.ceil(Math.abs(scissorBottomRight[0] - scissorTopLeft[0])),
+                (int) Math.ceil(Math.abs(scissorBottomRight[1] - scissorTopLeft[1])));
+
+        faces.sort((a, b) -> Float.compare(depthOf(a), depthOf(b)));
+        for (var face : faces) {
+            var positions = face.positions();
+            var uvs = face.uvs();
+            var sx = new float[4];
+            var sy = new float[4];
+            for (int i = 0; i < 4; i++) {
+                sx[i] = (float) (originX + positions[i * 3] * scale);
+                sy[i] = (float) (originY - positions[i * 3 + 1] * scale);
+            }
+            // GUI 管线会背面剔除：绕序必须和原版矩形填充一致（屏幕 y 向下 → 有向面积为负），
+            // 不一致就交换 v1 / v3（三角形带 (v0,v1,v2)(v2,v1,v3) 交换后正好反向）。
+            if (signedArea(sx, sy) > 0) {
+                var tmpX = sx[1];
+                sx[1] = sx[3];
+                sx[3] = tmpX;
+                var tmpY = sy[1];
+                sy[1] = sy[3];
+                sy[3] = tmpY;
+                var tmpU = uvs[2];
+                uvs[2] = uvs[6];
+                uvs[6] = tmpU;
+                var tmpV = uvs[3];
+                uvs[3] = uvs[7];
+                uvs[7] = tmpV;
+            }
+            var color = face.tint();
+            // 【26.2 修正 · 矩阵只施加一次】
+            // 顶点路径的规矩（见类注释）：矩形/四边形这一侧由 common-api 把矩阵**烘焙进顶点**，
+            // 提交的 pose 必须是单位矩阵，否则 GuiGraphicsExtractor 会再乘一次 →
+            // 面板弹出动画的缩放/平移被施加两遍，模型会放大并偏移出预览区。
+            // 这里按 transformGui 的做法手工把坐标变换到屏幕空间，pose 传单位矩阵。
+            var tx = new float[4];
+            var ty = new float[4];
+            for (int i = 0; i < 4; i++) {
+                var p = transformGuiFloat(sx[i], sy[i]);
+                tx[i] = p[0];
+                ty[i] = p[1];
+            }
+            GuiRenderStateAccess.get(graphics).addGuiElement(new QuadRenderState(
+                    RenderPipelines.GUI_TEXTURED,
+                    textureSetup,
+                    new org.joml.Matrix3x2f(),
+                    tx[0], ty[0], tx[1], ty[1], tx[2], ty[2], tx[3], ty[3],
+                    color,
+                    new float[]{
+                            spriteU(face, uvs[0]), spriteV(face, uvs[1]),
+                            spriteU(face, uvs[2]), spriteV(face, uvs[3]),
+                            spriteU(face, uvs[4]), spriteV(face, uvs[5]),
+                            spriteU(face, uvs[6]), spriteV(face, uvs[7])
+                    },
+                    scissorRect
+            ));
+        }
+    }
+
+    /** 四个屏幕坐标点的有向面积（屏幕 y 向下时，负数 = 与原版矩形填充同向）。 */
+    private static float signedArea(float[] sx, float[] sy) {
+        return (sx[1] - sx[0]) * (sy[2] - sy[0]) - (sx[2] - sx[0]) * (sy[1] - sy[0]);
+    }
+
+    private static float depthOf(ModelFace face) {
+        var positions = face.positions();
+        float depth = 0.0F;
+        for (int i = 0; i < 4; i++) {
+            depth += positions[i * 3 + 2];
+        }
+        return depth / 4.0F;
+    }
+
+    /** 贴图内坐标（0~1）→ 方块图集里的 u。 */
+    private static float spriteU(ModelFace face, float u) {
+        return face.u0() + (face.u1() - face.u0()) * u;
+    }
+
+    /** 贴图内坐标（0~1）→ 方块图集里的 v。 */
+    private static float spriteV(ModelFace face, float v) {
+        return face.v0() + (face.v1() - face.v0()) * v;
+    }
+
+    /**
+     * 逐面亮度：和 MC 渲染方块时一样（顶面最亮、底面最暗、两个侧面居中）。
+     * <p>
+     * 没有这层明暗，相邻的两个面颜色一样，模型看起来就是一块扁的板。
+     */
+    private static int shadeOf(net.minecraft.core.Direction direction) {
+        var shade = switch (direction) {
+            case DOWN -> 0.5F;
+            case UP -> 1.0F;
+            case NORTH, SOUTH -> 0.8F;
+            default -> 0.6F;
+        };
+        var value = Math.round(shade * 255.0F);
+        return 0xFF000000 | (value << 16) | (value << 8) | value;
+    }
+
+    /**
+     * 取一个方块状态的模型面（带缓存）。
+     * <p>
+     * 用的是 MC 自己的方块模型细分（{@code BlockStateModelPart#getQuads}），
+     * 所以贴图、旋转、朝向都和世界里的一模一样。
+     */
+    private static List<ModelFace> getModelFaces(net.minecraft.world.level.block.state.BlockState state,
+                                                  net.minecraft.client.resources.model.ModelManager modelManager,
+                                                  net.minecraft.util.RandomSource random) {
+        return MODEL_FACE_CACHE.computeIfAbsent(state, key -> {
+            var result = new java.util.ArrayList<ModelFace>();
+            try {
+                var model = modelManager.getBlockStateModelSet().get(key);
+                if (model == null) {
+                    return result;
+                }
+                var parts = new java.util.ArrayList<net.minecraft.client.renderer.block.dispatch.BlockStateModelPart>();
+                model.collectParts(random, parts);
+                for (var part : parts) {
+                    for (var direction : net.minecraft.core.Direction.values()) {
+                        for (var quad : part.getQuads(direction)) {
+                            var positions = new float[12];
+                            var uvs = new float[8];
+                            for (int i = 0; i < 4; i++) {
+                                var position = quad.position(i);
+                                positions[i * 3] = position.x();
+                                positions[i * 3 + 1] = position.y();
+                                positions[i * 3 + 2] = position.z();
+                                var packed = quad.packedUV(i);
+                                uvs[i * 2] = net.minecraft.client.model.geom.builders.UVPair.unpackU(packed);
+                                uvs[i * 2 + 1] = net.minecraft.client.model.geom.builders.UVPair.unpackV(packed);
+                            }
+                            var sprite = quad.materialInfo().sprite();
+                            result.add(new ModelFace(positions, uvs,
+                                    sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1(),
+                                    shadeOf(direction),
+                                    direction.getStepX(), direction.getStepY(), direction.getStepZ()));
+                        }
+                    }
+                }
+            } catch (Throwable throwable) {
+                LOGGER.debug("Failed to build model faces for {}", key, throwable);
+            }
+            return result;
+        });
+    }
+
+    /**
      * 把顶点路径攒下的顶点先刷进 GUI 渲染状态。
      * <p>
      * 26.2 的 GUI 是「状态机」：顶点路径要等 {@code flush()} 才会变成渲染状态里的元素，
@@ -412,6 +688,18 @@ public class MinecraftRenderer extends Renderer {
         var nx = matrix2d.m00() * fx + matrix2d.m10() * fy + matrix2d.m20();
         var ny = matrix2d.m01() * fx + matrix2d.m11() * fy + matrix2d.m21();
         return new int[]{Math.round(nx), Math.round(ny)};
+    }
+
+    /**
+     * {@link #transformGui(int, int)} 的浮点版本（模型预览的顶点坐标不能取整）。
+     */
+    private float[] transformGuiFloat(float x, float y) {
+        if (matrix2d == null) {
+            return new float[]{x, y};
+        }
+        var nx = matrix2d.m00() * x + matrix2d.m10() * y + matrix2d.m20();
+        var ny = matrix2d.m01() * x + matrix2d.m11() * y + matrix2d.m21();
+        return new float[]{nx, ny};
     }
 
 }

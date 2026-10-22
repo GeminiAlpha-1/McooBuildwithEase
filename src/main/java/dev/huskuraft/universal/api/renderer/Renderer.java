@@ -476,6 +476,25 @@ public abstract class Renderer {
 
     public abstract void renderTooltip(Typeface typeface, List<Text> list, int x, int y);
 
+    /**
+     * 在 GUI 里画一个 3D 方块模型预览。
+     * <p>
+     * 用途：剪贴板的结构预览。每一块都用**它自己的方块模型**（真实的贴图和面），
+     * 经过相机（偏航 / 俯仰 / 缩放 / 平移）投影成 2D 后画出来 ——
+     * 相邻方块共用同一批角点，所以严丝合缝、没有缝，也不会歪。
+     * <p>
+     * 默认实现什么都不画（平台不支持 3D 预览时）。
+     *
+     * @param blocks  要画的方块
+     * @param camera  相机参数
+     * @param x       视口左上角
+     * @param y       视口左上角
+     * @param width   视口宽度
+     * @param height  视口高度
+     */
+    public void renderModelPreview(List<PreviewBlock> blocks, PreviewCamera camera, int x, int y, int width, int height) {
+    }
+
     public abstract void renderBlockState(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockState blockState);
 
     public abstract void renderBlockEntity(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockEntity blockEntity);

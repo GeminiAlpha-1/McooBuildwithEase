@@ -171,7 +171,9 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
         }
         if (target != null && mouseOver) {
             this.setFocused(target);
-            if (button == 0) {
+            // 左键、右键都允许开始拖拽：
+            // 3D 预览用左键旋转、右键平移，两者都要能拖。
+            if (button == 0 || button == 1) {
                 this.setDragging(true);
             }
             return true;
@@ -188,7 +190,8 @@ public abstract class AbstractContainerWidget extends AbstractWidget implements 
 
     @Override
     public boolean onMouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        return this.getFocused() != null && this.isDragging() && button == 0 && this.getFocused().onMouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        return this.getFocused() != null && this.isDragging() && (button == 0 || button == 1)
+                && this.getFocused().onMouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
     @Override

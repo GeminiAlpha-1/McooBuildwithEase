@@ -34,11 +34,37 @@ public final class QuadRenderState implements GuiElementRenderState {
     private final float x3;
     private final float y3;
     private final int color;
+    /** 每个顶点的贴图坐标（4 个顶点 × 2 个 float）；为 null 表示不贴图。 */
+    private final float[] uvs;
+    /** 裁剪矩形（屏幕坐标）；null 表示不裁剪。 */
+    private final ScreenRectangle scissor;
     private final ScreenRectangle bounds;
 
     public QuadRenderState(RenderPipeline pipeline, TextureSetup textureSetup, Matrix3x2fc pose,
                            float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
                            int color) {
+        this(pipeline, textureSetup, pose, x0, y0, x1, y1, x2, y2, x3, y3, color, null, null);
+    }
+
+    /**
+     * 带贴图的四边形。
+     *
+     * @param uvs 4 个顶点的贴图坐标（u0,v0,u1,v1,u2,v2,u3,v3），要和顶点顺序一一对应
+     */
+    public QuadRenderState(RenderPipeline pipeline, TextureSetup textureSetup, Matrix3x2fc pose,
+                           float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                           int color, float[] uvs) {
+        this(pipeline, textureSetup, pose, x0, y0, x1, y1, x2, y2, x3, y3, color, uvs, null);
+    }
+
+    /**
+     * 带贴图 + 带裁剪的四边形。
+     *
+     * @param scissor 裁剪矩形（屏幕坐标）；null 表示不裁剪。
+     */
+    public QuadRenderState(RenderPipeline pipeline, TextureSetup textureSetup, Matrix3x2fc pose,
+                           float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                           int color, float[] uvs, ScreenRectangle scissor) {
         this.pipeline = pipeline;
         this.textureSetup = textureSetup;
         this.pose = pose;
@@ -51,6 +77,8 @@ public final class QuadRenderState implements GuiElementRenderState {
         this.x3 = x3;
         this.y3 = y3;
         this.color = color;
+        this.uvs = uvs;
+        this.scissor = scissor;
         this.bounds = bounds(x0, y0, x1, y1, x2, y2, x3, y3);
     }
 
@@ -67,10 +95,17 @@ public final class QuadRenderState implements GuiElementRenderState {
      */
     @Override
     public void buildVertices(com.mojang.blaze3d.vertex.VertexConsumer consumer) {
-        consumer.addVertexWith2DPose(pose, x0, y0).setColor(color);
-        consumer.addVertexWith2DPose(pose, x1, y1).setColor(color);
-        consumer.addVertexWith2DPose(pose, x2, y2).setColor(color);
-        consumer.addVertexWith2DPose(pose, x3, y3).setColor(color);
+        if (uvs == null) {
+            consumer.addVertexWith2DPose(pose, x0, y0).setColor(color);
+            consumer.addVertexWith2DPose(pose, x1, y1).setColor(color);
+            consumer.addVertexWith2DPose(pose, x2, y2).setColor(color);
+            consumer.addVertexWith2DPose(pose, x3, y3).setColor(color);
+            return;
+        }
+        consumer.addVertexWith2DPose(pose, x0, y0).setColor(color).setUv(uvs[0], uvs[1]);
+        consumer.addVertexWith2DPose(pose, x1, y1).setColor(color).setUv(uvs[2], uvs[3]);
+        consumer.addVertexWith2DPose(pose, x2, y2).setColor(color).setUv(uvs[4], uvs[5]);
+        consumer.addVertexWith2DPose(pose, x3, y3).setColor(color).setUv(uvs[6], uvs[7]);
     }
 
     @Override
@@ -86,7 +121,7 @@ public final class QuadRenderState implements GuiElementRenderState {
     @Override
     public ScreenRectangle scissorArea() {
         // GUI 渲染状态里允许 null（表示不裁剪）；径向菜单本身也不开裁剪。
-        return null;
+        return scissor;
     }
 
     @Override

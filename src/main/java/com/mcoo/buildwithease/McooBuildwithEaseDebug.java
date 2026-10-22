@@ -40,16 +40,25 @@ final class McooBuildwithEaseDebug {
                 case "builder" -> new McooBuildwithEaseBuilderSettingsScreen(entrance).attach();
                 case "clipboard" -> new McooBuildwithEaseClipboardScreen(entrance).attach();
                 case "clipboard-full" -> {
-                    // 塞一份假的剪贴板内容进去，好验证结构预览（正常玩法要先进游戏捕捉）
+                    // 塞一份假的剪贴板内容进去，好验证结构预览（正常玩法要先进游戏捕捉）。
+                    // 故意用好几种不同的方块：一来能看出贴图对不对，二来能看出面与面的明暗。
                     var builder = entrance.getStructureBuilder();
                     var player = entrance.getClient().getPlayer();
                     var blocks = new java.util.ArrayList<com.mcoo.buildwithease.building.clipboard.BlockData>();
+                    var kinds = new dev.huskuraft.universal.api.core.Item[]{
+                            dev.huskuraft.universal.api.core.Items.OAK_PLANKS.item(),
+                            dev.huskuraft.universal.api.core.Items.BRICKS.item(),
+                            dev.huskuraft.universal.api.core.Items.STONE_BRICKS.item(),
+                            dev.huskuraft.universal.api.core.Items.GLASS.item(),
+                            dev.huskuraft.universal.api.core.Items.SAND.item(),
+                            dev.huskuraft.universal.api.core.Items.OAK_LOG.item()
+                    };
                     for (int x = 0; x < 3; x++) {
-                        for (int y = 0; y < 2; y++) {
+                        for (int y = 0; y < 3; y++) {
                             for (int z = 0; z < 3; z++) {
                                 blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
                                         new dev.huskuraft.universal.api.core.BlockPosition(x, y, z),
-                                        dev.huskuraft.universal.api.core.Items.STONE.item().getBlock().getDefaultBlockState(),
+                                        kinds[(x * 3 + y * 2 + z) % kinds.length].getBlock().getDefaultBlockState(),
                                         null));
                             }
                         }
