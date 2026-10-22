@@ -37,6 +37,7 @@ function Stop-Java {
 
 # 1) 装 jar + 起服
 Stop-Java
+New-Item -ItemType Directory -Force -Path "$ts\mods" | Out-Null
 $jar = Get-ChildItem "$proj\build\libs" -Filter '*.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Get-ChildItem "$ts\mods" -Filter '*.jar' -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike 'fabric-api*' } | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
 Copy-Item $jar.FullName "$ts\mods\$($jar.Name)" -Force

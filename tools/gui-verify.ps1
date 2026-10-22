@@ -27,6 +27,7 @@ Get-CimInstance Win32_Process -Filter "Name='java.exe'" | ForEach-Object {
     }
 }
 Start-Sleep -Seconds 5
+New-Item -ItemType Directory -Force -Path "$ts\mods" | Out-Null
 $jar = Get-ChildItem "$proj\build\libs" -Filter '*.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Get-ChildItem "$ts\mods" -Filter '*.jar' -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike 'fabric-api*' } | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
 Copy-Item $jar.FullName "$ts\mods\$($jar.Name)" -Force

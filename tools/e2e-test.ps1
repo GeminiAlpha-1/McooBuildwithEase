@@ -15,6 +15,7 @@ Get-CimInstance Win32_Process -Filter "Name='java.exe'" | ForEach-Object {
 Start-Sleep -Seconds 3
 
 # 2) 装新 jar
+New-Item -ItemType Directory -Force -Path "$ts\mods" | Out-Null
 $jar = Get-ChildItem "$proj\build\libs" -Filter '*.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Get-ChildItem "$ts\mods" -Filter 'mcoo-*.jar' -File | ForEach-Object { Remove-Item $_.FullName -Force }
 Copy-Item $jar.FullName "$ts\mods\$($jar.Name)" -Force

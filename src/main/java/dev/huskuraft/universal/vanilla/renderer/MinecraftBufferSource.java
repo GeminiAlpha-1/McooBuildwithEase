@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -13,6 +14,8 @@ import dev.huskuraft.universal.api.renderer.BufferSource;
 import dev.huskuraft.universal.api.renderer.RenderLayer;
 import dev.huskuraft.universal.api.renderer.VertexBuffer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.render.TextureSetup;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -71,6 +74,8 @@ public class MinecraftBufferSource implements BufferSource {
     private final PoseStack poseStack;
     private final GuiGraphicsExtractor graphics;
     private final float[] tint;
+    /** 26.2 的 GUI 渲染状态：用来提交自定义的 GUI 元素（任意四边形）。拿不到就退回仿射近似。 */
+    private final net.minecraft.client.renderer.state.gui.GuiRenderState guiRenderState;
     private final Map<RenderType, Batch> batches = new LinkedHashMap<>();
 
     public MinecraftBufferSource(SubmitNodeCollector collector, PoseStack poseStack, float[] tint) {
@@ -78,6 +83,7 @@ public class MinecraftBufferSource implements BufferSource {
         this.poseStack = poseStack;
         this.graphics = null;
         this.tint = tint;
+        this.guiRenderState = null;
     }
 
     public MinecraftBufferSource(GuiGraphicsExtractor graphics, float[] tint) {
@@ -85,6 +91,7 @@ public class MinecraftBufferSource implements BufferSource {
         this.poseStack = null;
         this.graphics = graphics;
         this.tint = tint;
+        this.guiRenderState = GuiRenderStateAccess.get(graphics);
     }
 
     @Override
@@ -257,14 +264,45 @@ public class MinecraftBufferSource implements BufferSource {
      * 所以这里按双线性插值把四边形切成 N×N 个小块，每块用它的左上角平行四边形近似。
      * N=4 时误差在 1px 以内，肉眼看不出。
      */
+    /**
+     * 画一个任意四边形。
+     * <p>
+     * 26.2 的 GUI 没有多边形填充，只有轴对齐矩形 + 贴图 blit。
+     * <p>
+     * <b>优先走精确路径</b>：直接往 GUI 渲染状态里提交一个自定义元素（拆成两个三角形），
+     * 形状和 1.21.3（用 {@code MultiBufferSource} 直接画四边形）完全一致。
+     * <p>
+     * <b>兜底走仿射近似</b>：{@code fill} 会把 {@code pose} 应用到矩形四角，
+     * 所以「单位矩形 + 2D 仿射矩阵」能画出平行四边形；但仿射变换无法把矩形变成
+     * 「两条对边不等长」的梯形（径向菜单的扇形就是梯形），
+     * 只能再按双线性插值切成 N×N 小块、每块单独近似 —— 每块的对角点会有约 0.9 逻辑像素的误差
+     * （4×4 时），相邻小块的共享边因此错开 → 扇形上出现一道道细划痕、彩色段上出现黑点。
+     * 所以只有在拿不到 GUI 渲染状态时才用这条路。
+     */
     private void drawQuad(MinecraftVertexBuffer.Vertex a, MinecraftVertexBuffer.Vertex b,
                           MinecraftVertexBuffer.Vertex c, MinecraftVertexBuffer.Vertex d, int color) {
-        final int segments = 4;
         var p0 = new Vector2f(a.x(), a.y());
         var p1 = new Vector2f(b.x(), b.y());
         var p2 = new Vector2f(c.x(), c.y());
         var p3 = new Vector2f(d.x(), d.y());
 
+        if (guiRenderState != null) {
+            // 与原版矩形填充保持同样的绕序（屏幕坐标系 y 向下，有向面积为负），否则会被背面剔除
+            if (signedArea(p0, p1, p2) > 0) {
+                var swap = p1;
+                p1 = p3;
+                p3 = swap;
+            }
+            guiRenderState.addGuiElement(new QuadRenderState(
+                    RenderPipelines.GUI,
+                    TextureSetup.noTexture(),
+                    new Matrix3x2f(graphics.pose()),
+                    p0.x(), p0.y(), p1.x(), p1.y(), p2.x(), p2.y(), p3.x(), p3.y(),
+                    color));
+            return;
+        }
+
+        final int segments = 4;
         var pose = graphics.pose();
         // 当前 GUI 矩阵：我们的绘制要在它之后再叠加自己的仿射变换
         var current = new Matrix3x2f(pose);
@@ -301,6 +339,13 @@ public class MinecraftBufferSource implements BufferSource {
                 pose.popMatrix();
             }
         }
+    }
+
+    /**
+     * 三角形的有向面积（屏幕坐标系 y 向下）。
+     */
+    private static float signedArea(Vector2f p0, Vector2f p1, Vector2f p2) {
+        return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
     }
 
     /**
