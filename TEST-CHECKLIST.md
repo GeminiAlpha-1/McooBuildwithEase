@@ -15,10 +15,14 @@ jar 位置：`D:\WorkSpace\Effortless Structure\mcoo-buildwith-ease\build\libs\M
 
 ## 1. 硬指标：原版客户端能进服（最关键的一条）
 
-- [ ] 只在**服务端**装 mod，用**原版 26.2 客户端**连进来
-- [ ] 能正常进服、能看到世界、能走动
-- [ ] 服务端控制台**没有** "Unknown custom payload" 之类的报错
-- [ ] 服务端日志里该玩家**没有**被踢
+> 2026-10-22 已用 `tools/vanilla-test.ps1` 自动验过：纯原版 26.2 客户端（无 Fabric、无任何 mod）
+> 连上装了 mod 的测试服，进服、落地、进世界正常，客户端日志无 disconnect / unknown payload。
+
+- [x] 只在**服务端**装 mod，用**原版 26.2 客户端**连进来
+- [x] 能正常进服、能看到世界
+- [ ] 能走动（自动化只到「进世界并渲染」，走动要真人试）
+- [x] 服务端控制台**没有** "Unknown custom payload" 之类的报错
+- [x] 服务端日志里该玩家**没有**被踢
 
 ## 2. 带 mod 的客户端：进服与基础
 
@@ -70,12 +74,14 @@ jar 位置：`D:\WorkSpace\Effortless Structure\mcoo-buildwith-ease\build\libs\M
 - [ ] 按钮贴图正常（vanilla 按钮精灵）
 
 ### 4.1 双后端（Vulkan 是 26.2 的重点）
-在 **视频设置 → 显示 → Graphics API** 切换后各跑一遍 3.4 与 4：
 
-- [ ] `Prefer Vulkan`：启动 → 进服 → 建造预览正常（**这是未来默认，重点测**）
-- [ ] `Prefer OpenGL`：同样正常（**不能因为走了 Vulkan 就把 OpenGL 弄坏**）
-- [ ] F3 调试屏 `system_specs` 段确认实际运行的是哪个后端
-- [ ] 若机器支持，切到 Vulkan 后过一遍径向菜单 / 设置页（2D 界面在新后端下也要正常）
+> 2026-10-22 已用 `run/options.txt` 的 `preferredGraphicsBackend` 各跑一遍（RTX 3060）：
+> 径向菜单、剪贴板界面、世界侧选区框、破坏回归全部正常，两个后端渲染一致、无报错。
+
+- [x] `Prefer Vulkan`：启动 → 进服 → 建造预览正常（**这是未来默认，重点测**）
+- [x] `Prefer OpenGL`：同样正常（**不能因为走了 Vulkan 就把 OpenGL 弄坏**）
+- [x] 确认实际运行的是哪个后端（用客户端日志的 `Using graphics backend ...` 那行，比 F3 更直接）
+- [x] Vulkan 下过了一遍径向菜单 / 设置页（2D 界面在新后端下也正常）
 
 > 已知的能力取舍（26.2 没有 1.21.3 那套 RenderState 体系，本移植按「零自定义着色器 + vanilla 管线」实现）：
 > 预览方块不贴自定义纹理时退化为纯色；部分图层映射到最接近的 vanilla 管线，**纹理可能与 1.21.3 略有差异**。
@@ -83,7 +89,10 @@ jar 位置：`D:\WorkSpace\Effortless Structure\mcoo-buildwith-ease\build\libs\M
 
 ## 5. 与服务器现有 mod 的共存
 
-- [ ] 装了 **Axiom** 的客户端：拉选区 / 我们的建造模式**互不干扰**（两边输入都正常）
+- [x] 装了 **Axiom** 的客户端：我们的建造模式**不受影响**
+  （2026-10-22 用 `tools/behavior-test.ps1` 验过：装 Axiom 6.1.3 后，
+  径向菜单点击切模式、按住左键连续破坏、松开不自动破坏，判定通过）
+- [ ] 装了 Axiom 的客户端：**Axiom 自己的拉选区**也正常（自动化点不到它的快捷键，要真人试）
 - [ ] **WorldEdit** 正常；我们的建造不与 WorldEdit 的选区冲突
 - [ ] **Carpet** 规则正常生效
 

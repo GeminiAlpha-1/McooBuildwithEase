@@ -50,6 +50,17 @@ repositories {
 	}
 }
 
+configurations.all {
+	resolutionStrategy {
+		// Loom 的 dev 环境默认塞 mixinextras 0.5.4，而真实服务器（Fabric API 自带）是 0.5.5。
+		// 0.5.4 的 FactoryRedirectWrapperMixinTransformer 与新版 ASM 不兼容：
+		// 任何用了 @WrapFactory 的 mod（例：Axiom）在 dev 客户端都会崩在 mixin 变换阶段
+		// （ClassCastException: ArrayList cannot be cast to AnnotationNode）。
+		// 统一到 0.5.5 —— 只影响 dev 运行，生产环境由玩家的 Fabric API 提供。
+		force 'io.github.llamalad7:mixinextras-fabric:0.5.5'
+	}
+}
+
 dependencies {
 	// 【关键】26.2 起 Minecraft 不再混淆，直接对官方未混淆 jar 编译，
 	// 因此没有 `mappings` 那一行 —— API 名称就是 Mojang 官方名。

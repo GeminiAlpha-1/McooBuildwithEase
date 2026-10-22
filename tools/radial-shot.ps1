@@ -2,8 +2,15 @@
 param([int]$SettleSeconds = 3)
 $ErrorActionPreference = 'Stop'
 $proj = Split-Path -Parent $PSScriptRoot
-$ts = if ($env:MCOO_TEST_SERVER) { $env:MCOO_TEST_SERVER } else { Join-Path (Split-Path -Parent $PSScriptRoot) 'testserver' }
-$out = if ($env:MCOO_SHOTS) { $env:MCOO_SHOTS } else { Join-Path (Split-Path -Parent $PSScriptRoot) '_shots' }
+$ts = if ($env:MCOO_TEST_SERVER) { $env:MCOO_TEST_SERVER } else {
+    $sibling = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'testserver'
+    $inRepo = Join-Path (Split-Path -Parent $PSScriptRoot) 'testserver'
+    if (Test-Path $sibling) { $sibling } else { $inRepo }
+}
+$out = if ($env:MCOO_SHOTS) { $env:MCOO_SHOTS } else {
+    $parent = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    if ($parent -and (Test-Path $parent)) { Join-Path $parent '_shots' } else { Join-Path (Split-Path -Parent $PSScriptRoot) '_shots' }
+}
 if ($env:MCOO_GRADLE_HOME) { $env:GRADLE_USER_HOME = $env:MCOO_GRADLE_HOME }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 

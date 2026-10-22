@@ -150,6 +150,22 @@ $env:GRADLE_USER_HOME="D:\WorkSpace\McooServerFeatures\.gradle-home"   # 共享�
 `Context.Interactions#put` 现在是「同位置替换、不同位置追加」。
 交互列表的语义是「一组目标位置」，重复指向同一个方块不应该让数量增长。
 
+### 5.3 与 Axiom 共存（必须同装联调）
+
+Axiom 是**世界编辑**模组，它会拦截客户端鼠标做选区，和我们保留的 `MinecraftMixin` 是主要冲突面，
+所以**每次改 mixin 都要带着 Axiom 一起跑**。
+
+联调步骤：`tools/behavior-test.ps1`（把 Axiom 放进 `run/mods/` 再跑）——
+它会点开径向菜单切模式、按住左键破坏方块，正好覆盖 Axiom 抢鼠标的那条路径。
+
+⚠️ **dev 环境的 mixinextras 版本**：
+Loom 的 dev 客户端默认塞 mixinextras **0.5.4**，而真实服务器（Fabric API 自带）是 **0.5.5**。
+0.5.4 的 `FactoryRedirectWrapperMixinTransformer` 与新版 ASM 不兼容，
+**任何用了 `@WrapFactory` 的 mod（例：Axiom）在 dev 客户端都会崩在 mixin 变换阶段**
+（`ClassCastException: ArrayList cannot be cast to AnnotationNode`）——
+崩在 `net.minecraft.client.Minecraft` 上，看起来像是我们的 mixin 冲突，其实是版本问题。
+→ `build.gradle` 里用 `resolutionStrategy.force` 统一到 0.5.5（只影响 dev 运行，生产环境由玩家的 Fabric API 提供）。
+
 ## 6. GUI 纪律（26.2）
 
 26.2 的 GUI 是 2D 的（`Matrix3x2fStack`），绘制走 `GuiGraphicsExtractor`。
@@ -321,6 +337,13 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
   因此**世界侧绘制必须在 `LevelRenderEvents.COLLECT_SUBMITS` 阶段调用**。
 - **不自带自定义着色器**，一律用 vanilla 现成管线（`RenderTypes.OUTLINE` / `LINES` / `SECONDARY_BLOCK_OUTLINE`）+
   顶点色 —— 这样 OpenGL 与 Vulkan 两个后端都自动可用，Vulkan 零风险。
+- **双后端已实测通过**（2026-10-22，RTX 3060）：
+  OpenGL 与 Vulkan 各跑了一遍径向菜单、剪贴板界面、世界侧选区框、破坏回归，渲染一致、无报错。
+  切后端的方法：改 `run/options.txt` 的 `preferredGraphicsBackend:"vulkan"`（可选 `default` / `opengl` / `vulkan`）。
+  ⚠️ **写 options.txt 绝对不能带 BOM**（PowerShell 5.1 的 `Set-Content -Encoding UTF8` 会带）：
+  MC 会打一行 `Failed to load options` 然后**把整个配置丢回默认值** —— 后端会悄悄退回 OpenGL，
+  看日志里的 `Using graphics backend ...` 才算数。
+  要无 BOM 就用 `[System.IO.File]::WriteAllText($p, $s, (New-Object System.Text.UTF8Encoding($false)))`。
 - 铁律：适配层里不得出现 `GL11` / `lwjgl.opengl` / `com.mojang.blaze3d.systems.RenderSystem` 的 GL 专属状态。
 - 优先用官方 `fabric-rendering-v1`（`FabricRenderPipeline` / `SubmitRenderPhase` / `LevelRenderEvents` / `HudElementRegistry`），
   不要 mixin 渲染内部结构 —— Mojang 已经重构过两次渲染栈，第三次（Vibrant Visuals / deferred）在路上。
