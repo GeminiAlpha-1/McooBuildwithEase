@@ -65,8 +65,9 @@ public class McooBuildwithEaseSaveFileScreen extends AbstractPanelScreen {
         addWidget(new TextWidget(getEntrance(), getLeft() + getWidth() / 2, getTop() + PANEL_TITLE_HEIGHT_1 - 10,
                 getScreenTitle().withColor(AbstractPanelScreen.TITLE_COLOR), TextWidget.Gravity.CENTER));
 
-        this.pathWidget = addWidget(new TextWidget(getEntrance(), getLeft() + PADDINGS_H, getTop() + PANEL_TITLE_HEIGHT_1 + 2,
-                getWidth() - PADDINGS_H * 2 - 8, 10, Text.empty(), TextWidget.Gravity.START));
+        // Gravity.CENTER 传的是「中心点」，不是左边缘
+        this.pathWidget = addWidget(new TextWidget(getEntrance(), getLeft() + getWidth() / 2, getTop() + PANEL_TITLE_HEIGHT_1 + 2,
+                getWidth() - PADDINGS_H * 2 - 8, 10, Text.empty(), TextWidget.Gravity.CENTER));
 
         this.list = addWidget(new DirectoryList(getEntrance(), getLeft() + PADDINGS_H, getTop() + PANEL_TITLE_HEIGHT_1 + 14,
                 getWidth() - PADDINGS_H * 2 - 8, LIST_HEIGHT));
@@ -118,10 +119,10 @@ public class McooBuildwithEaseSaveFileScreen extends AbstractPanelScreen {
     /** 路径太长时只留尾部，免得糊出面板。 */
     private static String shortenPath(Path path) {
         var text = path.toString();
-        if (text.length() <= 52) {
+        if (text.length() <= 36) {
             return text;
         }
-        return "…/" + text.substring(text.length() - 50);
+        return "…/" + text.substring(text.length() - 34);
     }
 
     private void createFolder() {
