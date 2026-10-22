@@ -37,6 +37,10 @@ import org.joml.Vector2f;
  */
 public class MinecraftBufferSource implements BufferSource {
 
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(MinecraftBufferSource.class);
+    /** 临时诊断开关。 */
+    public static final boolean DEBUG = Boolean.getBoolean("mcoo.debugGui");
+
     /** 一批待提交的顶点（按 26.2 的 RenderType 分组）。 */
     public static class Batch {
 
@@ -204,8 +208,15 @@ public class MinecraftBufferSource implements BufferSource {
             var colorD = tint(color(d));
             if (colorA == colorB && colorB == colorC && colorC == colorD) {
                 if (isAxisAligned(a, b, c, d)) {
+                    if (DEBUG) {
+                        LOGGER.info("[gui] fill rect {} {} {} {} color={}", x1, y1, x2, y2, Integer.toHexString(colorA));
+                    }
                     graphics.fill(x1, y1, x2, y2, colorA);
                 } else {
+                    if (DEBUG) {
+                        LOGGER.info("[gui] drawQuad a=({},{}) b=({},{}) c=({},{}) d=({},{}) color={}",
+                                a.x(), a.y(), b.x(), b.y(), c.x(), c.y(), d.x(), d.y(), Integer.toHexString(colorA));
+                    }
                     drawQuad(a, b, c, d, colorA);
                 }
             } else {
@@ -271,6 +282,16 @@ public class MinecraftBufferSource implements BufferSource {
                 // 平行四边形：原点 q00，两条边分别指向 q10 / q01
                 var e1 = new Vector2f(q10.x - q00.x, q10.y - q00.y);
                 var e2 = new Vector2f(q01.x - q00.x, q01.y - q00.y);
+                // 【绕序】26.2 的 GUI 填充是三角形面片，背面会被剔除。
+                // 原版矩形填充的行列式是正的，而轮盘那种四边形的行列式是负的
+                //（顶点顺序是「内圈起点 → 内圈终点 → 外圈终点 → 外圈起点」，在屏幕坐标系里是顺时针），
+                // 直接套上去会把面片翻面 → 整块画不出来。
+                // 这里检测行列式，为负就交换两条边，保证与原版矩形填充同向。
+                if (e1.x * e2.y - e1.y * e2.x < 0) {
+                    var swap = e1;
+                    e1 = e2;
+                    e2 = swap;
+                }
                 var transform = new Matrix3x2f(e1.x, e1.y, e2.x, e2.y, q00.x, q00.y);
 
                 pose.pushMatrix();

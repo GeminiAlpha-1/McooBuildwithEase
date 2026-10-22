@@ -161,6 +161,9 @@ public class McooBuildwithEaseStructureScreen extends AbstractWheelScreen<Struct
         setRadialSelectResponder((slot, click) -> {
             setScaleAnimation(3f);
             getEntrance().getStructureBuilder().setStructure(getPlayer(), slot.getContent());
+            // 【交互变更】轮盘改成切换式之后没有「松开按键」这个关闭时机了，
+            // 选中建造模式就直接关掉（上游是靠松键关闭的）。
+            close();
         });
         setRadialOptionSelectResponder((entry, click) -> {
             setScaleAnimation(3f);

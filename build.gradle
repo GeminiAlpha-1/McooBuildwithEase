@@ -31,6 +31,11 @@ loom {
 			if (project.hasProperty('mcDebugScreen')) {
 				vmArgs "-Dmcoo.debugScreen=${project.property('mcDebugScreen')}"
 			}
+			// 调试用：打印 GUI 适配层的绘制调用（排查「画了但看不见」）
+			//   gradlew runClient -PmcDebugGui=true
+			if (project.hasProperty('mcDebugGui')) {
+				vmArgs "-Dmcoo.debugGui=${project.property('mcDebugGui')}"
+			}
 		}
 	}
 }

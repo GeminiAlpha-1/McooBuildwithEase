@@ -147,6 +147,15 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
 仿射变换只能得到平行四边形，所以任意四边形按双线性插值切成 N×N 块、每块用左上角的平行四边形近似
 （`MinecraftBufferSource#drawQuad`，N=4，误差 < 1px）。
 
+⚠️ **绕序必须和原版矩形填充一致**，否则会被背面剔除、整块画不出来（而且不报错）：
+原版矩形填充的顶点顺序是 `(x0,y0) → (x0,y1) → (x1,y1) → (x1,y0)`，对应仿射矩阵的行列式为正；
+轮盘那种四边形（内圈起点 → 内圈终点 → 外圈终点 → 外圈起点）在屏幕坐标系里行列式是**负**的，
+直接套上去会翻面。→ `drawQuad` 里检测行列式，为负就交换两条边。
+
+⚠️ `Matrix3x2fStack`（JOML 1.10.8）的 `pushMatrix()` 只是**保存当前矩阵**，
+`translate` / `scale` / `mul` 都是继承自 `Matrix3x2f` 的原地修改；
+`mul(m)` 是**右乘**（`this = this * m`，即「先 m 后 this」）。
+
 ### 6.6 图集精灵
 
 - 原版 GUI 精灵用 `blitSprite(pipeline, spriteId, ...)` 画，九宫格由精灵元数据处理，**不要自己按 UV 拉伸**。
@@ -156,7 +165,21 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
   所以 `TextureSprite.name()` 必须存原始 id，不能换成图集里的真实名字。
 - `Matrix3x2fStack` 的无参构造会 NPE（内部 `mats` 为 null），要用 `new Matrix3x2fStack(64)`。
 
-### 6.7 26.2 删掉的原版资源
+### 6.7 GUI 两条绘制路径的**顺序**（26.2 最阴的一个坑）
+
+26.2 的 GUI 是「状态机」，绘制分两条路径：
+
+| 路径 | 入口 | 什么时候进入 GUI 渲染状态 |
+|---|---|---|
+| 顶点路径 | `renderRect` / `renderQuad` / `renderTexture`（common-api 的矩形/四边形/贴图） | 顶点先攒着，**`flush()` 时**才变成渲染状态里的元素 |
+| 直接路径 | `graphics.text` / `item` / `setTooltipForNextFrame` / `blitSprite` | **立刻**进入渲染状态 |
+
+两条路径混用时，**不先 flush 就会顺序反过来**：先画的文字会排在自己面板的贴图**前面**，
+于是被面板底图盖住 —— 表现是「面板标题完全不显示」，而按钮标签正常（按钮渲染时刚好触发了 flush）。
+
+→ `MinecraftRenderer` 里凡是走直接路径（文字 / 物品 / tooltip / blitSprite），**绘制前先 `flushPending()`**。
+
+### 6.8 26.2 删掉的原版资源
 
 - `textures/gui/demo_background.png`（上游 1.21.3 的面板底图）**没有了**。
   面板底图改用本 mod 自带的 `textures/gui/panel_background.png`，

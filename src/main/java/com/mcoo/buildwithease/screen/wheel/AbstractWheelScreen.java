@@ -251,13 +251,33 @@ public abstract class AbstractWheelScreen<S, B> extends AbstractScreen {
 
     @Override
     public void onAnimateTick(float partialTick) {
-        this.detached = !getAssignedKeyBinds().isKeyDown();
+        // 【交互变更】轮盘改成「按一下打开、再按一下关闭」的切换式。
+        // 上游 1.21.3 是「按住显示、松开关闭」，实际用起来别扭：想点一个建造模式得一直按着，
+        // 自动化测试也没法稳定复现（松开就没了）。
+        // 现在的语义：
+        //   - 第一次按键由客户端管理器消费并打开轮盘（见 McooBuildwithEaseClientManager）；
+        //   - 轮盘开着的时候再按一次，这里 consumeClick() 命中 → 关闭（走淡出动画）；
+        //   - 选中一个建造模式后由业务层调用 close() 关闭。
+        // detached 是「粘」的：一旦置位就不会被后续帧改回去。
+        if (getAssignedKeyBinds().consumeClick()) {
+            this.detached = true;
+        }
         this.animationTicks = Math.min(Math.max(animationTicks + (detached ? -1 : 1) * partialTick, 0), MAX_ANIMATION_TICKS);
         this.animationScaleTicks = Math.min(Math.max(animationScaleTicks + (detached ? -1 : 1) * partialTick, 0), MAX_ANIMATION_TICKS);
         if (detached && animationTicks == 0) {
             detach();
         }
 
+    }
+
+    /**
+     * 请求关闭轮盘（走淡出动画）。
+     * <p>
+     * 用于「选中一个建造模式后自动关闭」这类场景 —— 上游靠松开按键来关闭，
+     * 改成切换式之后没有「松开」这个时机了。
+     */
+    public void close() {
+        this.detached = true;
     }
 
     @Override

@@ -166,8 +166,11 @@ public final class McooBuildwithEaseClientManager implements ClientManager {
             getEntrance().getStructureBuilder().resetInteractions(getRunningClient().getPlayer());
         }
 
-        if (McooBuildwithEaseKeys.BUILD_MODE_RADIAL.getKeyBinding().isDown()) {
-            if (!(getRunningClient().getPanel() instanceof McooBuildwithEaseStructureScreen)) {
+        // 【交互变更】轮盘改成「按一下打开、再按一下关闭」的切换式（见 AbstractWheelScreen#onAnimateTick）。
+        // 这里只在「轮盘没开」的时候消费按键：轮盘开着时要把这次点击留给轮盘自己处理（用来关闭），
+        // 否则第二次按键会被这里吃掉，轮盘就再也关不掉了。
+        if (!(getRunningClient().getPanel() instanceof McooBuildwithEaseStructureScreen)) {
+            if (McooBuildwithEaseKeys.BUILD_MODE_RADIAL.getKeyBinding().consumeClick()) {
                 new McooBuildwithEaseStructureScreen(getEntrance(), McooBuildwithEaseKeys.BUILD_MODE_RADIAL.getKeyBinding()).attach();
             }
         }

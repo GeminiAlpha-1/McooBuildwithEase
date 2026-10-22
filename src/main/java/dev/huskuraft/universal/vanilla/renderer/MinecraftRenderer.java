@@ -192,6 +192,8 @@ public class MinecraftRenderer extends Renderer {
                 var topLeft = transformGui(x, y);
                 var bottomRight = transformGui(x + width, y + height);
                 try {
+                    // 直接路径绘制前必须先把顶点路径的批次刷进去，否则顺序会反过来（见 flushPending 说明）
+                    flushPending();
                     graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                             id,
                             topLeft[0], topLeft[1],
@@ -234,7 +236,18 @@ public class MinecraftRenderer extends Renderer {
         // 所以这里补上 alpha=0xFF，等价于 1.21.3 的「默认不透明」。
         var opaque = color | 0xFF000000;
         if (graphics != null) {
+            // 【26.2 修正 · 绘制顺序】26.2 的 GUI 有两条绘制路径：
+            //   顶点路径（矩形 / 四边形 / 贴图）：顶点先攒着，flush() 时才变成 GUI 渲染状态里的元素；
+            //   直接路径（文字 / 物品 / tooltip / blitSprite）：立刻进入 GUI 渲染状态。
+            // 两条路径混用时如果不先 flush，先画的文字会排在自己面板的贴图**前面** → 被面板底图盖住看不见
+            // （表现就是「面板标题不显示」，而按钮标签正常 —— 按钮渲染时刚好触发了 flush）。
+            flushPending();
             var position = transformGui(x, y);
+            if (MinecraftBufferSource.DEBUG) {
+                LOGGER.info("[gui] text '{}' at ({},{}) color={} styleColor={}", component.getString(),
+                        position[0], position[1], Integer.toHexString(opaque),
+                        component.getStyle().getColor() == null ? "null" : Integer.toHexString(component.getStyle().getColor().getValue()));
+            }
             graphics.text(font, component, position[0], position[1], opaque, shadow);
             return font.width(component);
         }
@@ -259,6 +272,7 @@ public class MinecraftRenderer extends Renderer {
             // 世界模式下 26.2 的物品渲染要走 ItemModelResolver + submitItem，无法直接复用，暂不支持
             return;
         }
+        flushPending();
         var position = transformGui(x, y);
         graphics.item((net.minecraft.world.item.ItemStack) stack.reference(), position[0], position[1]);
     }
@@ -268,10 +282,22 @@ public class MinecraftRenderer extends Renderer {
         if (graphics == null) {
             return;
         }
+        flushPending();
         var font = (Font) typeface.reference();
         var components = list.stream().map(text -> (Component) text.reference()).toList();
         var position = transformGui(x, y);
         graphics.setTooltipForNextFrame(font, components, Optional.empty(), position[0], position[1]);
+    }
+
+    /**
+     * 把顶点路径攒下的顶点先刷进 GUI 渲染状态。
+     * <p>
+     * 26.2 的 GUI 是「状态机」：顶点路径要等 {@code flush()} 才会变成渲染状态里的元素，
+     * 而文字 / 物品 / tooltip 这些直接路径是立刻进去的。
+     * 不先刷的话，绘制顺序会反 —— 先画的文字被后画的贴图盖住（面板标题消失就是这么来的）。
+     */
+    private void flushPending() {
+        this.flush();
     }
 
     @Override
