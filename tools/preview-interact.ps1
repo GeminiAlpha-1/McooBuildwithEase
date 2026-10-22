@@ -112,10 +112,11 @@ function Invoke-Wheel {
     Start-Sleep -Milliseconds 300
     Write-Host ("  wheel " + $Notches + " notches at " + $p.X + "," + $p.Y)
     for ($i = 0; $i -lt [Math]::Abs($Notches); $i++) {
-        # mouse_event 的 dwData 是 uint32，但 P/Invoke 声明成 int 才对得上 WHEEL_DELTA 的符号。
-        # 负方向必须先转成 int 再隐式转 uint32 —— 直接 `[uint32](-120 -band 0xFFFFFFFF)` 会抛异常。
+        # dwData 直接传 int：P/Invoke 声明就是 int，WHEEL_DELTA 是有符号的 120 / -120。
+        # 【别加 [uint32] 转换】PowerShell 的 [uint32](-120) 会抛「值对于 UInt32 太大或太小」，
+        # 而异常发生在非交互脚本里会把整个脚本卡死（不报错、不退出），极难排查。
         $delta = if ($Notches -gt 0) { 120 } else { -120 }
-        [Win3]::mouse_event([Win3]::WHEEL, 0, 0, [uint32]([int]$delta), [IntPtr]::Zero)
+        [Win3]::mouse_event([Win3]::WHEEL, 0, 0, $delta, [IntPtr]::Zero)
         Start-Sleep -Milliseconds 250
     }
     Start-Sleep -Milliseconds 600
