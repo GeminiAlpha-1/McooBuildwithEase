@@ -38,6 +38,25 @@ final class McooBuildwithEaseDebug {
                 case "settings" -> new McooBuildwithEaseSettingsScreen(entrance).attach();
                 case "builder" -> new McooBuildwithEaseBuilderSettingsScreen(entrance).attach();
                 case "clipboard" -> new McooBuildwithEaseClipboardScreen(entrance).attach();
+                case "clipboard-full" -> {
+                    // 塞一份假的剪贴板内容进去，好验证结构预览（正常玩法要先进游戏捕捉）
+                    var builder = entrance.getStructureBuilder();
+                    var player = entrance.getClient().getPlayer();
+                    var blocks = new java.util.ArrayList<com.mcoo.buildwithease.building.clipboard.BlockData>();
+                    for (int x = 0; x < 3; x++) {
+                        for (int y = 0; y < 2; y++) {
+                            for (int z = 0; z < 3; z++) {
+                                blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                        new dev.huskuraft.universal.api.core.BlockPosition(x, y, z),
+                                        dev.huskuraft.universal.api.core.Items.STONE.item().getBlock().getDefaultBlockState(),
+                                        null));
+                            }
+                        }
+                    }
+                    builder.setClipboard(player, new com.mcoo.buildwithease.building.clipboard.Clipboard(
+                            true, new com.mcoo.buildwithease.building.clipboard.Snapshot("debug", 0, blocks)));
+                    new McooBuildwithEaseClipboardScreen(entrance).attach();
+                }
                 case "radial" -> new McooBuildwithEaseStructureScreen(entrance, McooBuildwithEaseKeys.BUILD_MODE_RADIAL.getKeyBinding()).attach();
                 case "general" -> new McooBuildwithEaseGeneralSettingsScreen(entrance).attach();
                 case "pattern" -> {

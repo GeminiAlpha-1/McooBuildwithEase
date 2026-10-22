@@ -443,6 +443,16 @@ public abstract class Renderer {
 
     public abstract void renderItem(ItemStack stack, int x, int y);
 
+    /**
+     * 带缩放地画一个物品（左上角在 {@code x, y}）。
+     * <p>
+     * 默认实现忽略缩放（只能画原大小）。26.2 的 GUI 可以通过 {@code GuiGraphicsExtractor} 的位姿
+     * 真正把物品模型缩放，剪切板的等轴测预览就靠这个。
+     */
+    public void renderItemScaled(ItemStack stack, int x, int y, float scale) {
+        this.renderItem(stack, x, y);
+    }
+
     public final void renderItem(Typeface typeface, ItemStack stack, int x, int y, @Nullable Text text) {
         this.renderItem(stack, x + 1, y + 1);
         this.pushPose();

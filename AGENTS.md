@@ -290,8 +290,15 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
   ⚠️ 给服务端控制台发命令**必须绕开 `StreamWriter`**（它用 `[Console]::InputEncoding`，
   本机是带 BOM 的 UTF-8，命令名会变成 `﻿tp` → "Unknown or incomplete command"）。
   脚本里 `Send-ServerCommand` 直接往底层流写无 BOM 字节。
-- GUI 界面自测：`tools/gui-verify.ps1 -Screens "builder,pattern,presets,general,clipboard,session"`
+- GUI 界面自测：`tools/gui-verify.ps1 -Screens "builder,pattern,presets,general,clipboard,clipboard-full,session"`
   （靠 `-Dmcoo.debugScreen=` 自动开界面截图；可用界面见 `McooBuildwithEaseDebug`）。
+- **26.2 的 GUI 画不出 3D**（只有 2D 管线，1.21.3 时 GUI 用的是 3D 位姿）。
+  凡是上游在 GUI 里摆 3D 方块的地方（剪贴板的结构预览），改成
+  「等轴测投影 + 每格画一个方块物品」：方块的物品模型本身就是 3D 立方体、带真实贴图，观感接近。
+  - 投影朝向要和物品模型一致（26.2 的 `ItemDisplayContext.GUI` 是绕 Y 225° 再绕 X 30°，缩放 0.625），
+    否则方块自身的面和摆放方向会打架。
+  - 缩放物品要走 `GuiGraphicsExtractor` 的位姿：common-api 的 `renderItem` 只变换坐标、不缩放模型，
+    所以额外加了 `Renderer#renderItemScaled`（默认实现忽略缩放，26.2 适配层覆盖）。
 
 - 26.2 渲染栈已重构：旧的 `RenderType` / `RenderStateShard` / `MultiBufferSource` / `ShaderInstance` / `CoreShaders` **全部不存在**。
 - 26.2 的 `RenderType` 构造器是 private、工厂包内可见 → **外部无法自建 RenderType**，

@@ -285,6 +285,23 @@ public class MinecraftRenderer extends Renderer {
     }
 
     @Override
+    public void renderItemScaled(ItemStack stack, int x, int y, float scale) {
+        if (graphics == null) {
+            return;
+        }
+        flushPending();
+        // 26.2 的 GUI 物品渲染会带上当时的位姿（GuiItemRenderState.pose），
+        // 位姿同时作用于物品模型和它的位置 —— 所以这里推一个「平移到 (x,y) 再缩放」的位姿，
+        // 物品就会以 (x,y) 为左上角、按 scale 缩放。
+        var pose = graphics.pose();
+        pose.pushMatrix();
+        pose.translate(x, y);
+        pose.scale(scale, scale);
+        graphics.item((net.minecraft.world.item.ItemStack) stack.reference(), 0, 0);
+        pose.popMatrix();
+    }
+
+    @Override
     public void renderTooltip(Typeface typeface, List<Text> list, int x, int y) {
         if (graphics == null) {
             return;
