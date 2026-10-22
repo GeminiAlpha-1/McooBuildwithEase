@@ -49,6 +49,8 @@ import org.joml.Matrix3x2fStack;
  */
 public class MinecraftRenderer extends Renderer {
 
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(MinecraftRenderer.class);
+
     private final Minecraft minecraftClient;
     private final MatrixStack matrixStack;
     private final MinecraftBufferSource bufferSource;
@@ -169,39 +171,55 @@ public class MinecraftRenderer extends Renderer {
     /**
      * GUI 侧的精灵绘制。
      * <p>
-     * 【26.2 修正】26.2 的 vanilla GUI 精灵改成了**九宫格**：例如按钮精灵
-     * {@code minecraft:widget/button} 在图集里是 200x20 的带边框贴图，
-     * 直接按 UV 拉伸会把中间部分糊成条纹（原版用 {@code blitSprite} 按九宫格规则切）。
+     * 【26.2 修正 · 尺寸】26.2 的 {@code blitSprite} 参数语义是
+     * {@code (x, y, width, height)}——<b>宽高</b>，不是 {@code (x1, y1, x2, y2)}。
+     * 原版 {@code AbstractButton#extractDefaultSprite} 就是
+     * {@code blitSprite(GUI_TEXTURED, <精灵 id>, getX(), getY(), getWidth(), getHeight(), alpha)}。
+     * 之前按角点传参，导致按钮宽度变成 {@code x + width}、高度变成 {@code y + height}，
+     * 整个面板被撑爆（就是「GUI 全部都变大了」那个现象）。
      * <p>
-     * 26.2 提供了原生 {@code GuiGraphicsExtractor#blitSprite(RenderPipeline, TextureAtlasSprite, ...)}，
-     * 对图集精灵直接用它即可；非图集纹理（本 mod 自己的图标、面板底色）仍走原来的拉伸路径。
+     * 【26.2 修正 · 九宫格】vanilla GUI 精灵改成了九宫格：例如按钮精灵
+     * {@code minecraft:widget/button} 在图集里是 200x20 的带边框贴图，
+     * 直接按 UV 拉伸会把中间糊成条纹。走原生 {@code blitSprite} 由精灵元数据处理缩放规则。
+     * 非图集贴图（本 mod 自己的图标、面板底色）仍走原来的 UV 拉伸路径。
      */
     @Override
     public void renderSprite(dev.huskuraft.universal.api.texture.TextureSprite sprite, int x, int y, int width, int height) {
-        if (graphics != null) {
-            var vanillaSprite = findVanillaSprite(sprite);
-            if (vanillaSprite != null) {
-                var position = transformGui(x, y);
-                graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI, vanillaSprite,
-                        position[0], position[1], position[0] + width, position[1] + height);
-                return;
+        if (graphics != null && sprite.name() != null) {
+            var id = (net.minecraft.resources.Identifier) sprite.name().reference();
+            if (id != null && isGuiAtlasSprite(id)) {
+                // 矩阵可能带缩放（面板弹出动画），所以两个角点都要变换，尺寸由变换后的差值算
+                var topLeft = transformGui(x, y);
+                var bottomRight = transformGui(x + width, y + height);
+                try {
+                    graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                            id,
+                            topLeft[0], topLeft[1],
+                            bottomRight[0] - topLeft[0], bottomRight[1] - topLeft[1],
+                            tint[3]);
+                    return;
+                } catch (Throwable throwable) {
+                    // 精灵 id 在 GUI 图集里查不到（会抛 MissingSprite）→ 退回 UV 拉伸
+                    LOGGER.warn("blitSprite failed for {}: {}", id, throwable.toString());
+                }
             }
         }
         super.renderSprite(sprite, x, y, width, height);
     }
 
     /**
-     * 把 common-api 的 {@link dev.huskuraft.universal.api.texture.TextureSprite} 对应到 26.2 的
-     * {@link net.minecraft.client.renderer.texture.TextureAtlasSprite}。
-     * 只有「来自图集」的精灵才有对应物；普通贴图返回 null。
+     * 判断这个精灵 id 是否在 vanilla 的 GUI 图集里。
+     * <p>
+     * 只有图集里的精灵才能用 {@code blitSprite} 画；本 mod 自己的贴图（图标、面板底色）
+     * 必须走 UV 拉伸路径。
      */
-    private net.minecraft.client.renderer.texture.TextureAtlasSprite findVanillaSprite(dev.huskuraft.universal.api.texture.TextureSprite sprite) {
+    private boolean isGuiAtlasSprite(net.minecraft.resources.Identifier id) {
         try {
             var atlasManager = Minecraft.getInstance().getAtlasManager();
-            var atlas = atlasManager.getAtlasOrThrow((net.minecraft.resources.Identifier) sprite.texture().reference());
-            return atlas.getSprite((net.minecraft.resources.Identifier) sprite.name().reference());
+            return atlasManager.get(new net.minecraft.client.resources.model.sprite.SpriteId(
+                    net.minecraft.client.renderer.Sheets.GUI_SHEET, id)) != null;
         } catch (Throwable ignored) {
-            return null;
+            return false;
         }
     }
 
@@ -209,9 +227,15 @@ public class MinecraftRenderer extends Renderer {
     protected int renderTextInternal(Typeface typeface, Text text, int x, int y, int color, int backgroundColor, boolean shadow, boolean seeThrough, int lightMap) {
         var font = (Font) typeface.reference();
         var component = (Component) text.reference();
+        // 【26.2 修正 · 文字颜色模型】26.2 的 Font 用「传入颜色的 alpha」+「样式里的 RGB」合成字形颜色
+        // （Font$PreparedTextBuilder#getTextColor：alpha 取自传入色，rgb 取自 style.getColor()）。
+        // 1.21.3 的字体 alpha 是独立字段，调用方习惯直接传 RGB（0xFFFFFF / 0x404040 …），
+        // 照搬到 26.2 会因为 alpha=0 让整段文字隐形（面板标题、轮盘标签都是这样没的）。
+        // 所以这里补上 alpha=0xFF，等价于 1.21.3 的「默认不透明」。
+        var opaque = color | 0xFF000000;
         if (graphics != null) {
             var position = transformGui(x, y);
-            graphics.text(font, component, position[0], position[1], color, shadow);
+            graphics.text(font, component, position[0], position[1], opaque, shadow);
             return font.width(component);
         }
         collector.submitText(
@@ -222,7 +246,7 @@ public class MinecraftRenderer extends Renderer {
                 shadow,
                 seeThrough ? Font.DisplayMode.SEE_THROUGH : Font.DisplayMode.NORMAL,
                 lightMap,
-                color,
+                opaque,
                 backgroundColor,
                 0
         );

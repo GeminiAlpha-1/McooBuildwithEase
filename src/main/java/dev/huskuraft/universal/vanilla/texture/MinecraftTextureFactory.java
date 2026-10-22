@@ -49,11 +49,12 @@ public final class MinecraftTextureFactory implements TextureFactory {
 
     @Override
     public TextureSprite getDemoBackgroundTextureSprite() {
-        // 26.2 里 vanilla 已经删掉了 "textures/gui/demo_background.png"（老版本用来做面板底纹的那张图），
+        // 26.2 里 vanilla 已经删掉了 "textures/gui/demo_background.png"（上游 1.21.3 用的就是这张），
         // 直接沿用旧路径会画成洋红色的「缺失纹理」。
-        // 这里改用本 mod 自己的 16x16 纯白贴图拉伸成面板底色。
-        return createTextureSprite(Identifier.fromNamespaceAndPath("mcoo_build_with_ease", "textures/misc/blank.png"),
-                null, 16, 16, 0, 0, 16, 16, new SpriteScaling.Stretch());
+        // 这里改用本 mod 自己的 32x32 面板底图，按九宫格（边框 6px）画 —— 和上游的画法一致：
+        // 浅灰面板 + 2px 黑边 + 2px 白高光，深色标题字（0x404040）能看清。
+        return createTextureSprite(Identifier.fromNamespaceAndPath("mcoo_build_with_ease", "textures/gui/panel_background.png"),
+                null, 32, 32, 0, 0, 32, 32, new SpriteScaling.NineSlice(32, 32, 6));
     }
 
     public TextureSprite createTextureSprite(Identifier texture, Identifier name, int width, int height, int x, int y, int textureWidth, int textureHeight, SpriteScaling scaling) {
@@ -66,6 +67,11 @@ public final class MinecraftTextureFactory implements TextureFactory {
      * 【26.2 修正】原实现只按图集纹理位置（{@code textures/atlas/gui.png}）查，
      * 查不到时 26.2 会返回「缺失精灵」→ 画出来就是紫色棋盘格 + 各种条纹。
      * 现在两种位置都试，并且把结果打进 debug 日志，便于核对。
+     * <p>
+     * 【26.2 修正 · 精灵 id】返回的 {@link TextureSprite} 里 {@code name} 必须存
+     * <b>原始的精灵 id</b>（例如 {@code minecraft:widget/button}）：
+     * {@code GuiGraphicsExtractor#blitSprite} 是拿这个 id 去 GUI 图集里查精灵的，
+     * 换成图集里的真实名字就查不到了。
      */
     public TextureSprite createTextureSprite(Identifier name) {
         var atlasManager = Minecraft.getInstance().getAtlasManager();
@@ -99,19 +105,27 @@ public final class MinecraftTextureFactory implements TextureFactory {
         }
         if (sprite == null) {
             LOGGER.warn("GUI sprite not found: {}", name);
-            return createTextureSprite(Sheets.GUI_SHEET, name, 16, 16, 0, 0, 256, 256, new SpriteScaling.Stretch());
+            // name 留空：这样渲染层会退回 UV 拉伸路径，而不是拿一个不存在的 id 去 blitSprite
+            return createTextureSprite(Sheets.GUI_SHEET, null, 16, 16, 0, 0, 256, 256, new SpriteScaling.Stretch());
         }
         LOGGER.info("GUI sprite {} found via {}: atlas={} u=({}..{}) v=({}..{}) size={}x{}",
                 name, how, sprite.atlasLocation(), sprite.getU0(), sprite.getU1(), sprite.getV0(), sprite.getV1(),
                 sprite.contents().width(), sprite.contents().height());
-        return createTextureSprite(sprite);
+        return createTextureSprite(sprite, name);
     }
 
     public TextureSprite createTextureSprite(TextureAtlasSprite sprite) {
+        return createTextureSprite(sprite, sprite.contents().name());
+    }
+
+    /**
+     * @param id 精灵 id，写进 {@link TextureSprite#name()}，供 {@code blitSprite} 查图集用
+     */
+    public TextureSprite createTextureSprite(TextureAtlasSprite sprite, Identifier id) {
         return new SimpleTextureSprite(
                 // 26.2 的 TextureAtlasSprite 自带 atlasLocation()，用它比写死 GUI_SHEET 可靠
                 new MinecraftResourceLocation(sprite.atlasLocation()),
-                new MinecraftResourceLocation(sprite.contents().name()),
+                new MinecraftResourceLocation(id),
                 sprite.contents().width(),
                 sprite.contents().height(),
                 sprite.getX(),

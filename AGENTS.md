@@ -97,16 +97,70 @@ $env:GRADLE_USER_HOME="D:\WorkSpace\McooServerFeatures\.gradle-home"   # 共享�
 
 ## 6. GUI 纪律（26.2）
 
-26.2 的 GUI 是 2D 的（`Matrix3x2fStack`），绘制走 `GuiGraphicsExtractor`：
+26.2 的 GUI 是 2D 的（`Matrix3x2fStack`），绘制走 `GuiGraphicsExtractor`。
+这一节的每一条都是 26.2 与 1.21.3 的**行为差异**，踩错一个就是「整个界面变形 / 图标全没了 / 文字隐形」。
 
-- **2D 矩阵必须复用 `GuiGraphicsExtractor#pose()`**，不要自建。
-  自建矩阵 + 手工变换坐标 = 缩放被应用两次（我们的矩阵一次、extractor 绘制时再一次）
-  → 整个界面变大、轮盘按钮挤成一团。
-- 坐标**不要手工变换**，extractor 绘制时会自己应用 pose（与 1.21.3 用同一个 pose 对象同理）。
-- 原版 GUI 精灵在 26.2 有专门 API：`blitSprite(pipeline, spriteId, ...)`；
-  查精灵用 `AtlasManager` + `SpriteId`，**查不到会拿到「缺失精灵」→ 画出来是紫色棋盘格 + 条纹**。
+### 6.1 坐标与矩阵：两条路径各应用一次
+
+common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
+
+| 路径 | 入口 | 矩阵怎么用 |
+|---|---|---|
+| 顶点路径 | `renderRect` / `renderQuad` / `renderTexture` → `MinecraftBufferSource` | 矩阵**烘焙进顶点**，所以 extractor 的 `pose()` 必须是单位阵 |
+| 直接路径 | `graphics.text` / `item` / `setTooltipForNextFrame` | extractor 自己应用它的 `pose()`，所以坐标要**手工**按我们的矩阵变换一次 |
+
+因此 `MinecraftRenderer` 里维护的是**自建的** `matrix2d`（不是 `graphics.pose()`）：
+`MinecraftMatrixStack` 烘焙进顶点，`transformGui()` 手工变换文字/物品/tooltip 的坐标。
+把自建矩阵塞进 extractor 的 pose 会让顶点路径被应用两次 → 整个界面变大。
+
+### 6.2 `blitSprite` 的参数是 (x, y, 宽, 高)
+
+26.2：`blitSprite(pipeline, spriteId, x, y, width, height, alpha)`
+（对照原版 `AbstractButton#extractDefaultSprite` 的调用）。
+
+传成 `(x1, y1, x2, y2)` 会让宽度变成 `x + width`、高度变成 `y + height` → 面板被撑爆。
+
+### 6.3 `blit` 的四个浮点是 (uMin, uMax, vMin, vMax)
+
+26.2：`blit(texture, x0, y0, x1, y1, uMin, uMax, vMin, vMax)` —— **u 在前、v 在后**
+（对应 `BlitRenderState` 的 `u0/u1/v0/v1` 字段）。
+
+传成 `(uMin, vMin, uMax, vMax)` 会把 u 区间压成 0 宽、v 区间压成 0 高
+→ 整张贴图只采到左上角一个像素 → **所有图标都画不出来**（纯色面板底因为刚好是那个颜色，看着「正常」）。
+
+### 6.4 文字颜色：必须传 ARGB，且 alpha = 0xFF
+
+26.2 的 `TextColor` 内部把值截成 24 位（纯 RGB），字形的 **alpha 取自「传给 Font 的那个颜色」**
+（`Font$PreparedTextBuilder#getTextColor`：alpha 取自传入色，rgb 取自 `style.getColor()`）。
+
+1.21.3 的字体 alpha 是独立字段，调用方习惯直接传 RGB（`0xFFFFFF` / `0x404040`）；
+照搬到 26.2 会因为 alpha=0 让整段文字隐形（面板标题、轮盘标签都是这样没的）。
+→ 渲染层统一给文字颜色补 `| 0xFF000000`。
+
+### 6.5 GUI 没有多边形填充：任意四边形用 2D 仿射矩阵还原
+
+26.2 的 `GuiGraphicsExtractor` 只剩轴对齐矩形 + 贴图 blit，**没有任意四边形**；
+1.21.3 靠 `MultiBufferSource` 直接画四边形（轮盘菜单的扇形就靠它）。
+
+`fill(x0, y0, x1, y1, color)` 会把 `pose()` 应用到矩形四角上
+→ 「单位矩形 + 仿射矩阵」= 平行四边形。
+仿射变换只能得到平行四边形，所以任意四边形按双线性插值切成 N×N 块、每块用左上角的平行四边形近似
+（`MinecraftBufferSource#drawQuad`，N=4，误差 < 1px）。
+
+### 6.6 图集精灵
+
+- 原版 GUI 精灵用 `blitSprite(pipeline, spriteId, ...)` 画，九宫格由精灵元数据处理，**不要自己按 UV 拉伸**。
+- 查精灵用 `AtlasManager` + `SpriteId`；**查不到会拿到「缺失精灵」→ 画出来是紫色棋盘格 + 条纹**。
   `SpriteId` 的第一个分量在不同版本分别表示过图集纹理位置 / 精灵定义目录，两种都试。
+- `blitSprite` 要的是**原始精灵 id**（如 `minecraft:widget/button`），
+  所以 `TextureSprite.name()` 必须存原始 id，不能换成图集里的真实名字。
 - `Matrix3x2fStack` 的无参构造会 NPE（内部 `mats` 为 null），要用 `new Matrix3x2fStack(64)`。
+
+### 6.7 26.2 删掉的原版资源
+
+- `textures/gui/demo_background.png`（上游 1.21.3 的面板底图）**没有了**。
+  面板底图改用本 mod 自带的 `textures/gui/panel_background.png`，
+  按九宫格（`SpriteScaling.NineSlice(32, 32, 6)`）画，保持上游的「浅灰面板 + 黑边 + 白高光」观感。
 
 ## 7. 渲染纪律
 

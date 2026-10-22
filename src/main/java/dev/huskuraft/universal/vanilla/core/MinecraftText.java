@@ -33,7 +33,11 @@ public record MinecraftText(Component refs) implements Text {
         return new MinecraftText(
                 refs.copy().setStyle(
                         refs.getStyle()
-                                .withColor(style.color() == null ? null : TextColor.fromRgb(style.color()))
+                                // 【26.2 修正 · 颜色模型】26.2 的 TextColor 内部会把值截成 24 位（纯 RGB），
+                                //   文字的 alpha 由「传给 Font 的颜色」决定，不在 style 里。
+                                //   common-api 的颜色常量（ChatFormatting、面板标题 0x00404040 等）全是 1.21.3 的 RGB 值，
+                                //   这里按 RGB 语义原样交给 TextColor，alpha 由渲染层统一补 0xFF。
+                                .withColor(style.color() == null ? null : TextColor.fromRgb(style.color() & 0xFFFFFF))
                                 .withBold(style.bold())
                                 .withItalic(style.italic())
                                 .withUnderlined(style.underlined())
