@@ -49,7 +49,11 @@ public class FabricClientEventRegistry extends ClientEventRegistry {
         // 提交时机不对的话节点不会进入渲染流程。
         LevelRenderEvents.COLLECT_SUBMITS.register(context -> {
             var partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-            getRenderWorldEvent().invoker().onRenderWorld(MinecraftRenderer.forWorld(context), partialTick);
+            var renderer = MinecraftRenderer.forWorld(context);
+            getRenderWorldEvent().invoker().onRenderWorld(renderer, partialTick);
+            // 【26.2 修正】世界侧的几何（选区框 / 图案 / 变换器预览）走 common-api 的顶点路径，
+            // 26.2 必须显式 flush 才会进 GUI/世界的渲染状态 —— 不 flush 的话整段几何根本不会被画出来。
+            renderer.flush();
         });
 
         // HUD 渲染：26.2 取消了 GuiMixin 的做法，官方提供 HudElementRegistry

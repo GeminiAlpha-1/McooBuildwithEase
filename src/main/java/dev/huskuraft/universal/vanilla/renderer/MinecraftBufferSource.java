@@ -41,8 +41,21 @@ import org.joml.Vector2f;
 public class MinecraftBufferSource implements BufferSource {
 
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(MinecraftBufferSource.class);
-    /** 临时诊断开关。 */
+    /**
+     * 诊断开关（调试构建用 {@code -Dmcoo.debugGui} 打开）。
+     * <p>
+     * 打开后会把 GUI 绘制与世界侧顶点提交打到日志里，定位「画了但看不见」这类问题。
+     */
     public static final boolean DEBUG = Boolean.getBoolean("mcoo.debugGui");
+    /** 诊断日志：每个渲染层只打一次，免得刷屏。 */
+    private static final java.util.Set<String> DEBUG_LOGGED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /**
+     * 提交世界侧自定义几何时用的「单位矩阵」PoseStack。
+     * <p>
+     * 顶点已经按模型矩阵变换过了，这里再传一次有矩阵的 PoseStack 会让变换被应用两次。
+     */
+    private static final PoseStack IDENTITY_POSE = new PoseStack();
 
     /** 一批待提交的顶点（按 26.2 的 RenderType 分组）。 */
     public static class Batch {
@@ -115,7 +128,16 @@ public class MinecraftBufferSource implements BufferSource {
                 if (batch.vertices.isEmpty()) {
                     continue;
                 }
-                collector.submitCustomGeometry(poseStack, batch.renderType, (pose, consumer) -> replay(batch, consumer));
+                // 【26.2 修正 · 模型矩阵不能应用两次】
+                // 顶点在 common-api 那边已经按模型矩阵变换过了（写进顶点缓冲时），
+                // 而 26.2 的自定义几何提交会再把 PoseStack 的当前矩阵当模型矩阵用一次 → 变换两次。
+                // 所以这里传一个单位矩阵的 PoseStack：顶点保持「已经变换好」的相机相对坐标。
+                if (DEBUG && DEBUG_LOGGED.add(batch.renderType.toString())) {
+                    var v = batch.vertices.get(0);
+                    LOGGER.info("[world] layer={} firstVertex=({},{},{}) levelPose={}",
+                            batch.renderType, v.x(), v.y(), v.z(), poseStack.last().pose());
+                }
+                collector.submitCustomGeometry(IDENTITY_POSE, batch.renderType, (pose, consumer) -> replay(batch, consumer));
             }
         } else if (graphics != null) {
             for (var batch : batches.values()) {

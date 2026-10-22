@@ -18,7 +18,6 @@ import dev.huskuraft.universal.api.renderer.OverlayTexture;
 import dev.huskuraft.universal.api.renderer.RenderLayer;
 import dev.huskuraft.universal.api.renderer.Renderer;
 import dev.huskuraft.universal.api.text.Text;
-import dev.huskuraft.universal.vanilla.core.MinecraftConvertor;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -310,11 +309,13 @@ public class MinecraftRenderer extends Renderer {
         var renderState = new BlockModelRenderState();
         var resolver = new BlockModelResolver(minecraftClient.getModelManager());
         resolver.update(renderState, state, BlockDisplayContext.create());
-        var position = MinecraftConvertor.toPlatformBlockPosition(blockPosition);
-        poseStack.pushPose();
-        poseStack.translate(position.getX(), position.getY(), position.getZ());
+        // 【26.2 修正 · 坐标叠加】
+        // 26.2 的方块模型是「局部坐标」（0..1），提交时位姿必须已经在方块位置 —— 这是调用方的责任
+        // （上游 BlockOperationRenderer 会先 translate(方块位置 - 相机)）。
+        // 之前这里又叠了一次「方块绝对位置」，净位移变成 2×方块位置 - 相机：
+        // 世界坐标越大偏得越远（近原点看不出来），方块预览就飞到几千格外去了。
+        // 参考原版 26.2：LevelRenderer#submitBlockEntities 也是「调用方先平移，再 submit」。
         renderState.submit(poseStack, collector, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
-        poseStack.popPose();
     }
 
     @Override
@@ -329,6 +330,8 @@ public class MinecraftRenderer extends Renderer {
         if (state == null) {
             return;
         }
+        // 和 renderBlockState 一样：位姿由调用方摆好（方块位置 - 相机），
+        // 方块实体渲染器本身是画局部坐标的，这里不能再叠一次位置。
         dispatcher.submit(state, poseStack, collector, cameraRenderState);
     }
 

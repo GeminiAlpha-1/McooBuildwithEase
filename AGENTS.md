@@ -245,6 +245,37 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
 
 ## 7. 渲染纪律
 
+- **26.2 的世界模型空间是「相机相对」的**（和 1.21.3 一样），这一点必须先确认再动坐标。
+  实证（26.2 原版字节码）：
+  - `LevelRenderer#submitFeatures` 新建一个**单位矩阵**的 PoseStack；
+  - 实体：`submitEntities` 传 `state.x - camX`，`EntityRenderDispatcher#submit` 再 `translate(实体位置 + 渲染偏移)`；
+  - 方块实体 / 方块破坏动画 / 方块选择框：一律 `translate(位置 - 相机)`。
+  → 所以**顶点必须是「位置 - 相机」**。上游那批 `start.sub(camera)` 在 26.2 依然是正确的，别删。
+  （`LevelRenderEvents` 给的 level PoseStack 是单位矩阵，**不能**据此认为世界是绝对坐标 ——
+  相机偏移是由每个提交者自己减的。）
+- **别把位置算两遍**。26.2 的方块模型是**局部坐标**（0..1），提交时位姿必须已经在方块位置。
+  原版的做法是「调用方先平移，再 submit」（`LevelRenderer#submitBlockEntities` 就是这么写的）。
+  之前 `MinecraftRenderer#renderBlockState` 又叠了一次**绝对**方块位置，
+  而调用方 `BlockOperationRenderer` 已经平移过「方块位置 - 相机」，
+  净位移变成 `2×方块位置 - 相机` → **预览框漂到几千格外，而且世界坐标越大偏得越远**
+  （近原点的测试世界看不出来，很容易漏测）。
+  → `renderBlockState` / `renderBlockEntity` **不要再叠位置**，位姿交给调用方。
+- **世界侧几何必须显式 flush**。common-api 的 `renderQuad` / `renderQuadUV` **不 flush**（只有
+  `renderRect` / `renderTexture` / `renderText` 会），而 1.21.3 是由原版在帧末统一 `endBatch()`。
+  26.2 改成渲染状态后没人替我们 flush → **整段几何（选区框 / 图案 / 变换器预览）根本不会进渲染状态**
+  （实测提交次数 0 → 加上 flush 后 1412）。
+  → `LevelRenderEvents.COLLECT_SUBMITS` 的处理函数末尾要 `renderer.flush()`。
+- **模型矩阵只能应用一次**。顶点在 common-api 那边已经按模型矩阵变换过了（写进顶点缓冲时），
+  `submitCustomGeometry` 再把 PoseStack 的矩阵当模型矩阵用一次就变成变换两次。
+  → 提交自定义几何时传一个**单位矩阵**的 PoseStack（`MinecraftBufferSource.IDENTITY_POSE`），
+  回调里也**不要**再用回调给的 pose（`addVertex(x,y,z)` 而不是 `addVertex(pose,x,y,z)`）。
+- 自测要覆盖「世界坐标很大」的情况：`tools/behavior-test.ps1` 支持 `MCOO_TELEPORT`
+  （用服务器控制台把玩家传送到远处，完整参数串含旋转，例 `MCOO_TELEPORT="1200 100 1200 0 20"`），
+  否则近原点的测试世界看不出偏移类问题。
+  ⚠️ 给服务端控制台发命令**必须绕开 `StreamWriter`**（它用 `[Console]::InputEncoding`，
+  本机是带 BOM 的 UTF-8，命令名会变成 `﻿tp` → "Unknown or incomplete command"）。
+  脚本里 `Send-ServerCommand` 直接往底层流写无 BOM 字节。
+
 - 26.2 渲染栈已重构：旧的 `RenderType` / `RenderStateShard` / `MultiBufferSource` / `ShaderInstance` / `CoreShaders` **全部不存在**。
 - 26.2 的 `RenderType` 构造器是 private、工厂包内可见 → **外部无法自建 RenderType**，
   只能用 `net.minecraft.client.renderer.rendertype.RenderTypes` 的现成条目。

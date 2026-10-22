@@ -1,11 +1,20 @@
 ﻿# 行为验证：模拟「按住左键」与「松开」，用服务端 [build] 日志判断自动破坏是否已修复
-param([int]$HoldSeconds = 3, [int]$IdleSeconds = 3)
+param(
+    [int]$HoldSeconds = 3,
+    [int]$IdleSeconds = 3,
+    # 轮盘槽位（0 基）：0=DISABLED 1=SINGLE 2=LINE 3=SQUARE ...
+    # 用 LINE(2) 才会产生批量结果 → 才会走「方块预览」渲染路径
+    [int]$Slot = 1
+)
 $ErrorActionPreference = 'Stop'
 $proj = Split-Path -Parent $PSScriptRoot
 $ts = if ($env:MCOO_TEST_SERVER) { $env:MCOO_TEST_SERVER } else { Join-Path (Split-Path -Parent $PSScriptRoot) 'testserver' }
 $out = if ($env:MCOO_SHOTS) { $env:MCOO_SHOTS } else { Join-Path (Split-Path -Parent $PSScriptRoot) '_shots' }
 if ($env:MCOO_GRADLE_HOME) { $env:GRADLE_USER_HOME = $env:MCOO_GRADLE_HOME }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
+# 去掉 BOM：本机 Console.InputEncoding 默认是「带 BOM 的 UTF-8」，
+# Process 的 StandardInput 会用它建 StreamWriter → 给服务端发的命令前面会多一个 U+FEFF。
+try { [Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false) } catch { }
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -38,15 +47,46 @@ function Stop-Java {
     Start-Sleep -Seconds 3
 }
 
+# 给服务端控制台发一条命令。
+# 【坑】不能用 $server.StandardInput.WriteLine()：Process 的 StandardInput 用
+# [Console]::InputEncoding 建 StreamWriter，本机默认是「带 BOM 的 UTF-8」，
+# 写出去的第一条命令前面会多一个 U+FEFF → 服务端解析出的命令名变成 "﻿tp"
+# → "Unknown or incomplete command"，命令根本没执行。
+# 两道保险：① 脚本开头把 Console.InputEncoding 换成不带 BOM 的 UTF-8
+#          ② 直接往底层流写不带 BOM 的 UTF-8 字节，绕开 StreamWriter。
+function Send-ServerCommand {
+    param($Proc, [string]$Command)
+    $enc = New-Object System.Text.UTF8Encoding($false)
+    $bytes = $enc.GetBytes($Command + "`n")
+    $Proc.StandardInput.BaseStream.Write($bytes, 0, $bytes.Length)
+    $Proc.StandardInput.BaseStream.Flush()
+}
+
 # 装 jar + 起服
+# 服务器用 Process 起（而不是 Start-Process），这样能用控制台指令把玩家传送到大坐标 ——
+# 世界渲染的坐标偏移问题只有在世界坐标很大时才会暴露（近原点的世界看不出来）。
 Stop-Java
 New-Item -ItemType Directory -Force -Path "$ts\mods" | Out-Null
 $jar = Get-ChildItem "$proj\build\libs" -Filter '*.jar' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Get-ChildItem "$ts\mods" -Filter '*.jar' -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike 'fabric-api*' } | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
 Copy-Item $jar.FullName "$ts\mods\$($jar.Name)" -Force
 Remove-Item "$ts\logs\latest.log" -Force -ErrorAction SilentlyContinue
-$server = Start-Process -FilePath 'java' -ArgumentList @('-Xmx2G', '-jar', 'fabric-server-launch.jar', 'nogui') `
-    -WorkingDirectory $ts -PassThru -NoNewWindow -RedirectStandardOutput "$ts\logs\beh.out.log" -RedirectStandardError "$ts\logs\beh.err.log"
+Remove-Item "$ts\logs\beh.out.log" -Force -ErrorAction SilentlyContinue
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = 'java'
+$psi.Arguments = '-Xmx2G -jar fabric-server-launch.jar nogui'
+$psi.WorkingDirectory = $ts
+$psi.UseShellExecute = $false
+$psi.RedirectStandardInput = $true
+$psi.RedirectStandardOutput = $true
+$psi.RedirectStandardError = $true
+$server = New-Object System.Diagnostics.Process
+$server.StartInfo = $psi
+$server.Start() | Out-Null
+Register-ObjectEvent -InputObject $server -EventName OutputDataReceived -Action { if ($EventArgs.Data) { Add-Content -Path "$ts\logs\beh.out.log" -Value $EventArgs.Data } } | Out-Null
+Register-ObjectEvent -InputObject $server -EventName ErrorDataReceived -Action { if ($EventArgs.Data) { Add-Content -Path "$ts\logs\beh.err.log" -Value $EventArgs.Data } } | Out-Null
+$server.BeginOutputReadLine()
+$server.BeginErrorReadLine()
 $deadline = (Get-Date).AddSeconds(60)
 while ((Get-Date) -lt $deadline) {
     Start-Sleep -Seconds 2
@@ -59,7 +99,7 @@ Write-Host "server ready"
 
 # 起客户端
 Push-Location $proj
-Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', "gradlew.bat runClient `"-PmcQuickPlay=127.0.0.1:25599`" --console=plain > `"$ts\logs\beh-client.log`" 2>&1") -WorkingDirectory $proj -PassThru -NoNewWindow | Out-Null
+Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', "gradlew.bat runClient -PmcDebugGui=true `"-PmcQuickPlay=127.0.0.1:25599`" --console=plain > `"$ts\logs\beh-client.log`" 2>&1") -WorkingDirectory $proj -PassThru -NoNewWindow | Out-Null
 Pop-Location
 Write-Host "client launching, waiting for join..."
 $deadline = (Get-Date).AddSeconds(150)
@@ -73,6 +113,22 @@ while ((Get-Date) -lt $deadline) {
 }
 Write-Host ("joined: " + $joined)
 if (-not $joined) { Write-Host "client did not join, aborting"; Stop-Java; exit 1 }
+
+# 把玩家传送到大坐标（1000+），让「世界坐标偏移类」的渲染问题暴露出来
+# MCOO_TELEPORT 是完整参数串（含旋转）：例 "1200 -63 1200 0 45"
+# 26.2 的 /tp 语法：控制台命令不带斜杠，且坐标后面必须跟旋转（yaw pitch），
+# 否则报 "Unknown or incomplete command"
+if ($env:MCOO_TELEPORT) {
+    Write-Host ("teleport -> " + $env:MCOO_TELEPORT)
+    # 用 execute as @a run tp @s 而不是 tp @a：
+    # 26.2 的 tp 对「选择器匹配到多个实体」会直接报错，execute 逐个执行就没这个问题。
+    Send-ServerCommand $server "execute as @a run tp @s $($env:MCOO_TELEPORT)"
+    Start-Sleep -Seconds 10
+    # 回读玩家真实坐标，确认传送真的生效了
+    # 注意：@a 可能匹配到多个实体（data get 只允许一个），所以用 execute as @a 逐个取
+    Send-ServerCommand $server "execute as @a run data get entity @s Pos"
+    Start-Sleep -Seconds 2
+}
 Start-Sleep -Seconds 5
 
 # 找到 MC 窗口，把鼠标移到窗口中心
@@ -135,12 +191,12 @@ Write-Host ("client ${cw}x${ch} guiScale=$guiScale gui=${guiW}x${guiH}")
 
 $modeCount = 14
 $rad = 2 * [Math]::PI / $modeCount
-$angle = 1 * $rad - [Math]::PI / 2
+$angle = $Slot * $rad - [Math]::PI / 2
 $sx = $guiW / 2 + 51.25 * [Math]::Cos($angle)
 $sy = $guiH / 2 + 51.25 * [Math]::Sin($angle)
 $slotX = $origin.X + [int]($sx * $guiScale)
 $slotY = $origin.Y + [int]($sy * $guiScale)
-Write-Host ("SINGLE slot at $slotX,$slotY")
+Write-Host ("slot $Slot at $slotX,$slotY")
 
 # 按一下左 Alt 打开轮盘
 [Win2]::keybd_event(0xA4, 0, 0, [IntPtr]::Zero)
@@ -157,6 +213,10 @@ Start-Sleep -Milliseconds 100
 [Win2]::mouse_event([Win2]::LEFTUP, 0, 0, 0, [IntPtr]::Zero)
 Start-Sleep -Seconds 2
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'screenshot.ps1') -Out (Join-Path $out 'behavior-mode.png') | Out-Null
+# 放大准星附近，方便肉眼确认「预览框」到底画在哪
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'crop.ps1') `
+    -In (Join-Path $out 'behavior-mode.png') -Out (Join-Path $out 'behavior-mode-zoom.png') `
+    -X 280 -Y 165 -W 300 -H 200 -Scale 3 | Out-Null
 
 function Count-Build {
     if (-not (Test-Path "$ts\logs\latest.log")) { return 0 }
