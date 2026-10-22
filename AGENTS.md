@@ -100,6 +100,7 @@ $env:GRADLE_USER_HOME="D:\WorkSpace\McooServerFeatures\.gradle-home"   # 共享�
 | `gui-verify.ps1` | 起服 + 客户端自动打开指定界面（`-PmcDebugScreen=settings`）→ 截图；`-Click "dx,dy;dx,dy"` 连点（相对屏幕中心的逻辑像素）、`-Keys "ctrl+a"` 发按键 |
 | `radial-shot.ps1` | 抓径向菜单截图（会自动把鼠标悬停到某个槽位上） |
 | `behavior-test.ps1` | **自动破坏回归测试**：俯视地面 → 按左 Alt 开轮盘 → 点第二个槽位切到 Single → 按住左键 → 松开，判定「按住能破坏、松开不再自动破坏」 |
+| `vanilla-test.ps1` | **服务端独占验收**：用启动器里的**官方客户端 jar**直接起一个纯净客户端（不走 Fabric Loader，所以 mod 一概不加载）→ `--quickPlayMultiplayer` 连测试服 → 判定原版客户端能不能进服 |
 | `screenshot.ps1` | 用 PrintWindow 抓 Minecraft 窗口 |
 
 路径约定（可用环境变量覆盖）：
@@ -331,6 +332,17 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
 1. 发包前用 `ServerPlayNetworking.canSend(player, channel)` 过滤（`FabricNetworking.Server#send` 已实现）。
 2. 服务端逻辑不得假设玩家装了 mod。
 3. 原版 26.2 客户端对未知 channel 走 `DiscardedPayload` 静默丢弃（不踢线）—— 这是兜底，不能当作唯一保障。
+
+**怎么验收**：`tools/vanilla-test.ps1` —— 从启动器实例里取出**官方客户端 jar**和库清单，
+绕开 Fabric Loader 直接起一个纯原版客户端（`net.minecraft.client.main.Main` +
+`--quickPlayMultiplayer <host>:<port>`），看服务端日志里有没有 `joined the game`。
+
+踩过的坑：
+- 客户端 jar 所在目录名带空格（`26.2-Fabric 0.19.3`）→ classpath 是一个整体参数，
+  必须先把 jar 复制到无空格的路径；`Start-Process` 的**数组**参数不保住引号，
+  要自己拼成**一个**字符串，逐个含空格的参数加引号（`-D` 形式只能给值加引号）。
+- 全新 gameDir 会卡在「无障碍向导」首启界面（quickPlay 也要等它过去）→ 复制实例的 `options.txt`。
+- 库在 `versions\..\libraries\` 下，不在 `.minecraft` 根目录。
 
 ## 8. 跟版流程（服务器升级 MC 时照着做）
 
