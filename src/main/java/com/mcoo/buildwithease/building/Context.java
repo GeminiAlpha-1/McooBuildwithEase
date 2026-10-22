@@ -339,8 +339,30 @@ public record Context(
             return results.get(index);
         }
 
+        /**
+         * 追加一个交互。
+         * <p>
+         * 【26.2 修正】上游这里是纯追加（不去重）：同一个方块被重复 trace 到就会一直加，
+         * 交互列表无限增长 → 客户端每 tick 把越来越大的集合发给服务端 →
+         * 服务端每 tick 破坏 N 个方块（N 还在涨）→ 世界被铲平。
+         * 这里改成<strong>同一位置的交互替换而不是追加</strong>：
+         * 交互列表的语义本来就是「一组目标位置」，
+         * 重复指向同一个方块时不应该让数量增长。
+         */
         public Interactions put(BlockInteraction interaction) {
-            return new Interactions(Stream.concat(results.stream(), Stream.of(interaction)).toList());
+            var results = new java.util.ArrayList<>(this.results);
+            for (int i = 0; i < results.size(); i++) {
+                var existing = results.get(i);
+                if (existing == null || interaction == null) {
+                    continue;
+                }
+                if (existing.getBlockPosition().equals(interaction.getBlockPosition())) {
+                    results.set(i, interaction);
+                    return new Interactions(results);
+                }
+            }
+            results.add(interaction);
+            return new Interactions(results);
         }
 
         public boolean isMissing() {

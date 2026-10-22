@@ -126,6 +126,13 @@ public final class McooBuildwithEaseStructureBuilder extends StructureBuilder {
 
         if (context.isBuildType()) {
             McooBuildwithEase.LOGGER.debug("Received BUILD request from %s".formatted(player.getProfile().getName()));
+            // 诊断日志：出现「自动疯狂破坏」时，看这行的 interactions / traceSize 就能定位
+            McooBuildwithEase.LOGGER.info("[build] %s mode=%s state=%s interactions=%d traceSize=%d".formatted(
+                    player.getProfile().getName(),
+                    context.buildMode(),
+                    context.buildState(),
+                    context.interactionsSize(),
+                    context.structure().traceSize(context)));
             var result = new BatchBuildSession(getEntrance(), player, context).commit();
             getOperationResultStack(player).push(result);
             getEntrance().getChannel().sendPacket(PlayerBuildTooltipPacket.build(result), player);

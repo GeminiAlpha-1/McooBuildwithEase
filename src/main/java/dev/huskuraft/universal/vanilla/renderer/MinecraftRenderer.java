@@ -74,7 +74,12 @@ public class MinecraftRenderer extends Renderer {
         this.collector = null;
         this.poseStack = null;
         this.cameraRenderState = null;
-        this.matrix2d = MinecraftMatrixStack.createMatrix2d();
+        // 【关键】直接复用 GuiGraphicsExtractor 自己的 2D 矩阵。
+        // 1.21.3 的做法是 new MinecraftRenderer(guiGraphics.pose()) —— 用的是同一个 pose 对象；
+        // 26.2 里如果自建一个独立矩阵再手工变换坐标，缩放就会被应用两次
+        // （一次是我们矩阵里的面板动画缩放，一次是 extractor 绘制时自己应用的 pose），
+        // 结果就是整个界面被放大、轮盘按钮全挤在一起。
+        this.matrix2d = graphics.pose();
         this.matrixStack = new MinecraftMatrixStack(matrix2d);
         this.bufferSource = new MinecraftBufferSource(graphics, tint);
     }
@@ -238,21 +243,16 @@ public class MinecraftRenderer extends Renderer {
     }
 
     /**
-     * GUI 模式下把 common-api 的逻辑坐标按当前 2D 矩阵变换一次。
+     * GUI 模式下的坐标变换。
      * <p>
-     * common-api 的 {@code renderText} / {@code renderItem} 直接给出屏幕坐标，
-     * 而 {@code GuiGraphicsExtractor} 不认我们的 2D 矩阵，所以这里手动变换。
+     * 【26.2 修正】以前这里会按我们自己的 2D 矩阵手工变换一次坐标，
+     * 但 {@code GuiGraphicsExtractor} 的绘制方法自己就会应用它内部的 pose，
+     * 于是缩放被应用了两次（界面整体变大、轮盘按钮挤成一团）。
+     * 现在 2D 矩阵就是 extractor 的 pose 本身，绘制时由 extractor 统一应用，
+     * 所以这里**必须原样返回逻辑坐标**。
      */
     private int[] transformGui(int x, int y) {
-        if (matrix2d == null) {
-            return new int[]{x, y};
-        }
-        // JOML 的 Matrix3x2f 是列主序：x' = m00*x + m10*y + m20，y' = m01*x + m11*y + m21
-        var fx = (float) x;
-        var fy = (float) y;
-        var nx = matrix2d.m00() * fx + matrix2d.m10() * fy + matrix2d.m20();
-        var ny = matrix2d.m01() * fx + matrix2d.m11() * fy + matrix2d.m21();
-        return new int[]{Math.round(nx), Math.round(ny)};
+        return new int[]{x, y};
     }
 
 }

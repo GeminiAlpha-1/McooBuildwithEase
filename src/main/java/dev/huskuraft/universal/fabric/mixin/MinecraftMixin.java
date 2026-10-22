@@ -17,12 +17,19 @@ import net.minecraft.world.InteractionHand;
 /**
  * 客户端输入拦截。
  *
- * <p>26.2 的 Minecraft 里这几个方法都改成了 private：
+ * <p><b>注入点必须与上游 1.21.3 一致，不能改成方法头。</b>
+ * 26.2 里这些方法都改成了 private：
  * {@code startAttack()} / {@code continueAttack(boolean)} / {@code startUseItem()} / {@code pickBlockOrEntity()}
  * （1.21.3 的 {@code pickBlock} 在 26.2 改名为 {@code pickBlockOrEntity}）。
  *
- * <p>注入点一律放在方法 HEAD：不依赖方法内部的调用序列，比上游 1.21.3 那种
- * {@code @At("INVOKE", target = "...HitResult;getType()")} 的深层锚点稳定得多，跟版时只需确认方法名还在。
+ * <p>为什么不能用 {@code @At("HEAD")}：
+ * 上游把事件挂在「真的在攻击 / 真的在用物品」的具体调用点上，
+ * 事件因此只在**确实存在目标**时触发一次。
+ * 改到方法头之后，事件会在「按住鼠标的每一 tick」都触发，
+ * 而业务层的 {@code Interactions.put()} 是纯追加不去重，
+ * 交互列表会无限增长 → 客户端每 tick 都把越来越大的交互集合发给服务端 →
+ * 服务端每 tick 破坏 N 个方块（N 还在涨）→ 世界被瞬间铲平。
+ * 26.2 字节码里这四个锚点都还在（已逐一核对），所以按上游原样挂回去。
  */
 @Mixin(Minecraft.class)
 public abstract class MinecraftMixin {
@@ -31,28 +38,42 @@ public abstract class MinecraftMixin {
     @Nullable
     public LocalPlayer player;
 
-    @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
+    /**
+     * 点击瞬间开始攻击。锚点 = {@code HitResult#getType()}，
+     * 即「射线确实打到了什么东西」时才通知业务层（与上游 1.21.3 一致）。
+     */
+    @Inject(method = "startAttack", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/HitResult;getType()Lnet/minecraft/world/phys/HitResult$Type;"), cancellable = true)
     private void onPlayerStartAttack(CallbackInfoReturnable<Boolean> cir) {
         if (InteractionInputEvents.ATTACK.invoker().onAttack(player, InteractionHand.MAIN_HAND)) {
             cir.setReturnValue(false);
         }
     }
 
-    @Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
+    /**
+     * 按住鼠标持续破坏。锚点 = {@code BlockState#isAir()}，
+     * 即「确实在破坏一个非空气方块」时才通知业务层（与上游 1.21.3 一致）。
+     */
+    @Inject(method = "continueAttack", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;isAir()Z"), cancellable = true)
     private void onPlayerContinueAttack(boolean bl, CallbackInfo ci) {
         if (InteractionInputEvents.ATTACK.invoker().onAttack(player, InteractionHand.MAIN_HAND)) {
             ci.cancel();
         }
     }
 
-    @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
+    /**
+     * 使用物品。锚点 = {@code LocalPlayer#getItemInHand(InteractionHand)}（与上游 1.21.3 一致）。
+     */
+    @Inject(method = "startUseItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getItemInHand(Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/item/ItemStack;"), cancellable = true)
     private void onPlayerStartUseItem(CallbackInfo ci) {
         if (InteractionInputEvents.USE_ITEM.invoker().onUseItem(player, InteractionHand.MAIN_HAND)) {
             ci.cancel();
         }
     }
 
-    @Inject(method = "pickBlockOrEntity", at = @At("HEAD"), cancellable = true)
+    /**
+     * 中键选取方块。锚点 = {@code LocalPlayer#getAbilities()}（与上游 1.21.3 一致）。
+     */
+    @Inject(method = "pickBlockOrEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getAbilities()Lnet/minecraft/world/entity/player/Abilities;"), cancellable = true)
     private void onPlayerPickBlock(CallbackInfo ci) {
         if (InteractionInputEvents.PICK_BLOCK.invoker().onPickBlock(player, InteractionHand.MAIN_HAND)) {
             ci.cancel();
