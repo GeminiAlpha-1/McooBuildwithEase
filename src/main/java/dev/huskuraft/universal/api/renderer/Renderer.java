@@ -190,6 +190,19 @@ public abstract class Renderer {
         this.renderRect(RenderLayers.GUI, x1, y1, x2, y2, color, z);
     }
 
+    /**
+     * 画文本选区高亮（输入框里选中一段文字时的背景）。
+     * <p>
+     * 1.21.3 走的是一个专用的「文字高亮」渲染层；26.2 对应
+     * {@code GuiGraphicsExtractor#textHighlight}，是**加色混合** ——
+     * 蓝色加在底色上，选中的文字仍然看得见。
+     * <p>
+     * 默认实现退回普通矩形填充，平台层应覆盖成原版那条路径。
+     */
+    public void renderTextHighlight(int x1, int y1, int x2, int y2, int color, boolean invert) {
+        this.renderRect(RenderLayers.GUI_TEXT_HIGHLIGHT, x1, y1, x2, y2, color);
+    }
+
     public final void renderRect(RenderLayer renderLayer, int x1, int y1, int x2, int y2, int color) {
         this.renderRect(renderLayer, x1, y1, x2, y2, color, 0);
     }

@@ -12,7 +12,6 @@ import org.lwjgl.glfw.GLFW;
 import dev.huskuraft.universal.api.gui.AbstractWidget;
 import dev.huskuraft.universal.api.math.MathUtils;
 import dev.huskuraft.universal.api.platform.Entrance;
-import dev.huskuraft.universal.api.renderer.RenderLayers;
 import dev.huskuraft.universal.api.renderer.Renderer;
 import dev.huskuraft.universal.api.text.Text;
 
@@ -468,7 +467,7 @@ public class EditBox extends AbstractWidget {
             i = this.getX() + this.getWidth();
         }
 
-        renderer.renderRect(RenderLayers.GUI_TEXT_HIGHLIGHT, i, j, k, l, 0xFF0000FF);
+        renderer.renderTextHighlight(i, j, k, l, 0xFF0000FF, false);
     }
 
     private int getMaxLength() {

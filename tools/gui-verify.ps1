@@ -1,9 +1,18 @@
 ﻿# GUI 视觉验证：起服一次 → 逐个界面：起客户端(自动开界面) → 截图 → 只停客户端
-param([string]$Screens = 'settings,radial', [string]$Click = '')
+param([string]$Screens = 'settings,radial', [string]$Click = '', [string]$Keys = '')
 $ErrorActionPreference = 'Stop'
 $proj = Split-Path -Parent $PSScriptRoot
-$ts = if ($env:MCOO_TEST_SERVER) { $env:MCOO_TEST_SERVER } else { Join-Path (Split-Path -Parent $PSScriptRoot) 'testserver' }
-$out = if ($env:MCOO_SHOTS) { $env:MCOO_SHOTS } else { Join-Path (Split-Path -Parent $PSScriptRoot) '_shots' }
+$ts = if ($env:MCOO_TEST_SERVER) { $env:MCOO_TEST_SERVER } else {
+    # 测试服可能在仓库同级目录，也可能在仓库内：两个都认，谁存在用谁
+    $sibling = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'testserver'
+    $inRepo = Join-Path (Split-Path -Parent $PSScriptRoot) 'testserver'
+    if (Test-Path $sibling) { $sibling } else { $inRepo }
+}
+# 截图默认放仓库同级目录（和测试服一致），仓库根是盘根时才放仓库内
+$out = if ($env:MCOO_SHOTS) { $env:MCOO_SHOTS } else {
+    $parent = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    if ($parent -and (Test-Path $parent)) { Join-Path $parent '_shots' } else { Join-Path (Split-Path -Parent $PSScriptRoot) '_shots' }
+}
 if ($env:MCOO_GRADLE_HOME) { $env:GRADLE_USER_HOME = $env:MCOO_GRADLE_HOME }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
@@ -66,6 +75,22 @@ function Invoke-Click {
     Start-Sleep -Seconds 3
 }
 
+# 给 MC 窗口发按键（SendKeys 语法：^=Ctrl, {ENTER}=回车 …）
+function Send-Keys {
+    param([string]$KeySpec)
+    $proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*Minecraft*' } | Select-Object -First 1
+    if (-not $proc) { Write-Host "  找不到 MC 窗口，跳过按键"; return }
+    [Win2]::ShowWindow($proc.MainWindowHandle, 9) | Out-Null
+    [Win2]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null
+    Start-Sleep -Milliseconds 800
+    $alias = @{ 'ctrl+a' = '^a'; 'ctrl+c' = '^c'; 'ctrl+v' = '^v'; 'end' = '{END}'; 'home' = '{HOME}'; 'esc' = '{ESC}'; 'enter' = '{ENTER}' }
+    $key = $KeySpec.ToLower()
+    $spec = if ($alias.ContainsKey($key)) { $alias[$key] } else { $KeySpec }
+    Write-Host ("  send keys " + $spec)
+    [System.Windows.Forms.SendKeys]::SendWait($spec)
+    Start-Sleep -Seconds 2
+}
+
 function Stop-Client {
     Get-CimInstance Win32_Process -Filter "Name='java.exe'" | ForEach-Object {
         if ($_.CommandLine -match 'devlaunchinjector') {
@@ -101,6 +126,12 @@ Get-CimInstance Win32_Process -Filter "Name='java.exe'" | ForEach-Object {
     }
 }
 Start-Sleep -Seconds 5
+# 上一个服务器进程刚被杀时，世界文件的锁不会立刻放开，
+# 这时候起服会直接报「另一个程序已锁定文件的一部分」然后秒退 —— 等端口空出来再起
+for ($i = 0; $i -lt 30; $i++) {
+    if (-not (Get-NetTCPConnection -LocalPort 25599 -ErrorAction SilentlyContinue)) { break }
+    Start-Sleep -Seconds 1
+}
 Remove-Item "$ts\logs\latest.log" -Force -ErrorAction SilentlyContinue
 $server = Start-Process -FilePath 'java' -ArgumentList @('-Xmx2G', '-jar', 'fabric-server-launch.jar', 'nogui') `
     -WorkingDirectory $ts -PassThru -NoNewWindow -RedirectStandardOutput "$ts\logs\gui.out.log" -RedirectStandardError "$ts\logs\gui.err.log"
@@ -115,7 +146,7 @@ while ((Get-Date) -lt $deadline) {
     }
 }
 if (-not $serverUp) {
-    Write-Host "服务器没起来！日志尾部："
+    Write-Host ("服务器没起来！（exit=" + $server.ExitCode + "，testserver=" + $ts + "）日志尾部：")
     Get-Content "$ts\logs\gui.err.log" -Tail 15 -ErrorAction SilentlyContinue
     Get-Content "$ts\logs\gui.out.log" -Tail 15 -ErrorAction SilentlyContinue
     exit 1
@@ -156,6 +187,13 @@ foreach ($s in ($Screens -split ',')) {
         foreach ($one in ($Click -split ';')) {
             $parts = $one -split ','
             Invoke-Click -Dx ([int]$parts[0]) -Dy ([int]$parts[1])
+        }
+    }
+
+    if ($Keys -ne '') {
+        # 支持多次按键：-Keys "ctrl+a;end"（在点击之后发）
+        foreach ($one in ($Keys -split ';')) {
+            Send-Keys -KeySpec $one
         }
     }
 

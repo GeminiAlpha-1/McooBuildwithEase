@@ -23,6 +23,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockModelRenderState;
 import net.minecraft.client.renderer.block.BlockModelResolver;
@@ -256,7 +257,11 @@ public class MinecraftRenderer extends Renderer {
                         lastScissor == null ? "none" : Arrays.toString(lastScissor));
             }
             graphics.text(font, component, position[0], position[1], opaque, shadow);
-            return font.width(component);
+            // 【26.2 修正 · 返回值语义】common-api 约定 renderText 返回「文本结束处的绝对 x」
+            // （上游 1.21.3 的 Font#drawInBatch 返回的就是 x + width）。
+            // 之前返回的是「文字宽度」，于是调用方拿它当光标位置用时就少了起点偏移：
+            // 输入框里光标和选区高亮全跑到屏幕最左边去了。
+            return x + font.width(component);
         }
         collector.submitText(
                 poseStack,
@@ -270,7 +275,37 @@ public class MinecraftRenderer extends Renderer {
                 backgroundColor,
                 0
         );
-        return font.width(component);
+        return x + font.width(component);
+    }
+
+    /**
+     * 文本选区高亮。
+     * <p>
+     * 26.2 原版 {@code EditBox} 用的是 {@code GuiGraphicsExtractor#textHighlight}：
+     * 走 {@code GUI_TEXT_HIGHLIGHT} 管线（**加色混合**），
+     * 所以蓝色是「加」在底上的 —— 选中的文字仍然看得见。
+     * <p>
+     * 如果退回普通的 {@code fill}（普通 alpha 混合），蓝色会把选中的文字整段盖住。
+     */
+    @Override
+    public void renderTextHighlight(int x1, int y1, int x2, int y2, int color, boolean invert) {
+        if (graphics == null) {
+            super.renderTextHighlight(x1, y1, x2, y2, color, invert);
+            return;
+        }
+        // 直接路径：绘制前先刷掉顶点路径攒下的批次，否则顺序会反过来（见 flushPending 说明）
+        flushPending();
+        var a = transformGui(x1, y1);
+        var b = transformGui(x2, y2);
+        // 归一化成「左 <= 右、上 <= 下」：原版矩形填充的绕序是这样，反了会被背面剔除
+        var left = Math.min(a[0], b[0]);
+        var right = Math.max(a[0], b[0]);
+        var top = Math.min(a[1], b[1]);
+        var bottom = Math.max(a[1], b[1]);
+        if (invert) {
+            graphics.fill(RenderPipelines.GUI_INVERT, left, top, right, bottom, -1);
+        }
+        graphics.fill(RenderPipelines.GUI_TEXT_HIGHLIGHT, left, top, right, bottom, color);
     }
 
     @Override

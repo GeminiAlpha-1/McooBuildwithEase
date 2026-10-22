@@ -2,6 +2,7 @@ package com.mcoo.buildwithease;
 
 import com.mcoo.buildwithease.screen.builer.McooBuildwithEaseBuilderSettingsScreen;
 import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseClipboardScreen;
+import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseSaveFileScreen;
 import com.mcoo.buildwithease.screen.general.McooBuildwithEaseGeneralSettingsScreen;
 import com.mcoo.buildwithease.screen.pattern.McooBuildwithEasePatternScreen;
 import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSessionStatusScreen;
@@ -73,6 +74,10 @@ final class McooBuildwithEaseDebug {
                 case "presets" -> new McooBuildwithEaseTransformerPresetsSelectScreen(entrance, transformer -> {
                 }).attach();
                 case "session" -> new McooBuildwithEaseSessionStatusScreen(entrance).attach();
+                case "savefile" -> new McooBuildwithEaseSaveFileScreen(entrance,
+                        dev.huskuraft.universal.api.export.StructureExporter.Format.LITEMATIC,
+                        "mcoo-test-structure.litematic",
+                        3, 2, 3, java.util.List.of()).attach();
                 default -> McooBuildwithEase.LOGGER.warn("Unknown debug screen: {}", screen);
             }
         } catch (Throwable throwable) {

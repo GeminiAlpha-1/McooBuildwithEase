@@ -32,7 +32,7 @@ dev.huskuraft.universal.fabric/**    Fabric 适配层：事件 / mixin / network
 | loader_version | 0.19.3 | **必须与服务器一致** |
 | fabric_api_version | 0.153.0+26.2 | **必须与服务器一致** |
 | loom_version | 1.18-SNAPSHOT | |
-| mod_version | 26.0.0+26.2 | 规则见下面「版本号规则」 |
+| mod_version | 26.1.1+26.2 | 规则见下面「版本号规则」 |
 
 ⚠️ 编译版本必须 ≤ 服务器版本：用更新的 Fabric API 编译会引入服务器没有的类/方法 → 运行时 `NoSuchMethodError`。
 
@@ -97,7 +97,7 @@ $env:GRADLE_USER_HOME="D:\WorkSpace\McooServerFeatures\.gradle-home"   # 共享�
 |---|---|
 | `self-test.ps1` | 构建 → 装 jar → 起服 → 抓日志 |
 | `e2e-test.ps1` | 起服 + 客户端 quickPlay 连服 → 检查双方日志 |
-| `gui-verify.ps1` | 起服 + 客户端自动打开指定界面（`-PmcDebugScreen=settings`）→ 截图 |
+| `gui-verify.ps1` | 起服 + 客户端自动打开指定界面（`-PmcDebugScreen=settings`）→ 截图；`-Click "dx,dy;dx,dy"` 连点（相对屏幕中心的逻辑像素）、`-Keys "ctrl+a"` 发按键 |
 | `radial-shot.ps1` | 抓径向菜单截图（会自动把鼠标悬停到某个槽位上） |
 | `behavior-test.ps1` | **自动破坏回归测试**：俯视地面 → 按左 Alt 开轮盘 → 点第二个槽位切到 Single → 按住左键 → 松开，判定「按住能破坏、松开不再自动破坏」 |
 | `screenshot.ps1` | 用 PrintWindow 抓 Minecraft 窗口 |
@@ -308,6 +308,11 @@ common-api 的 GUI 绘制有两条路径，矩阵只能被应用一次：
   - 缩放物品要走 `GuiGraphicsExtractor` 的位姿：common-api 的 `renderItem` 只变换坐标、不缩放模型，
     所以额外加了 `Renderer#renderItemScaled`（默认实现忽略缩放，26.2 适配层覆盖）。
 
+- **`renderText` 的返回值是「文本结束处的绝对 x」，不是文字宽度**。
+  common-api 的契约来自上游 1.21.3 的 `Font#drawInBatch`（返回 `x + width`），
+  `EditBox` 靠它推光标位置和选区右端。
+  → 26.2 适配层必须返回 `x + font.width(component)`；
+  之前返回 `font.width(component)` → 输入框里光标和选区高亮全跑到屏幕最左边。
 - 26.2 渲染栈已重构：旧的 `RenderType` / `RenderStateShard` / `MultiBufferSource` / `ShaderInstance` / `CoreShaders` **全部不存在**。
 - 26.2 的 `RenderType` 构造器是 private、工厂包内可见 → **外部无法自建 RenderType**，
   只能用 `net.minecraft.client.renderer.rendertype.RenderTypes` 的现成条目。
@@ -404,3 +409,14 @@ Path export(String name, int sizeX, int sizeY, int sizeZ, List<Block> blocks, Fo
 自己引 AWT 的 `FileDialog` 在 GLFW/Vulkan 客户端里容易和焦点/GL 上下文打架。
 **为什么没抄 Litematica 的**：Litematica 是 GPLv3，本项目是 LGPLv3，直接抄会把整个 mod 逼成 GPLv3 ——
 这是许可证层面的决定，得项目所有者拍板，不能顺手就抄。
+
+### 10.4 `api/renderer/Renderer.java` 新增 `renderTextHighlight`（新增平台能力）
+
+26.2 原版 `EditBox` 的选区高亮走 `GuiGraphicsExtractor#textHighlight`：
+`GUI_TEXT_HIGHLIGHT` 管线是**加色混合**，蓝色是「加」在底色上的 —— 选中的文字仍然看得见。
+
+common-api 原来直接画一个普通矩形（普通 alpha 混合）→ 选中的文字会被一整块蓝色盖住。
+
+所以在 `Renderer` 上加了 `renderTextHighlight(x1, y1, x2, y2, color, invert)`：
+默认实现退回普通矩形填充，26.2 适配层覆盖成原版那条路径。
+（和 `renderItemScaled` 同一个套路：common-api 给默认实现，平台层覆盖。）

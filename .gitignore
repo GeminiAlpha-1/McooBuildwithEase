@@ -17,6 +17,9 @@ logs/
 # 本地测试服（从 McooServerFeatures/testserver 复制的二进制，不入库）
 testserver/
 
+# GUI 自测截图
+_shots/
+
 # 操作系统
 .DS_Store
 Thumbs.db
