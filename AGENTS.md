@@ -55,9 +55,30 @@ $env:GRADLE_USER_HOME="D:\WorkSpace\McooServerFeatures\.gradle-home"   # 共享�
   ```groovy
   loom { accessWidenerPath = file("src/main/resources/mcoo_build_with_ease.classtweaker") }
   ```
-- 自测服务器：`testserver/`（不入库，从 `D:\WorkSpace\McooServerFeatures\testserver` 复制），
-  脚本 `_tools/self-test.ps1` 会构建 → 装 jar → 起服 → 抓日志。
-- 查 26.2 API：类索引 `_probe\classes-26.2.txt`（10952 个类）+ javap，不要凭 1.21 记忆猜。
+- 自测服务器：`testserver/`（不入库），脚本 `tools/self-test.ps1` 会构建 → 装 jar → 起服 → 抓日志。
+- 查 26.2 API：类索引 + javap，不要凭 1.21 记忆猜。
+
+### 4.1 自测脚本（`tools/`，都在仓库里）
+
+| 脚本 | 作用 |
+|---|---|
+| `self-test.ps1` | 构建 → 装 jar → 起服 → 抓日志 |
+| `e2e-test.ps1` | 起服 + 客户端 quickPlay 连服 → 检查双方日志 |
+| `gui-verify.ps1` | 起服 + 客户端自动打开指定界面（`-PmcDebugScreen=settings`）→ 截图 |
+| `radial-shot.ps1` | 抓径向菜单截图（会自动把鼠标悬停到某个槽位上） |
+| `behavior-test.ps1` | **自动破坏回归测试**：俯视地面 → 按左 Alt 开轮盘 → 点第二个槽位切到 Single → 按住左键 → 松开，判定「按住能破坏、松开不再自动破坏」 |
+| `screenshot.ps1` | 用 PrintWindow 抓 Minecraft 窗口 |
+
+路径约定（可用环境变量覆盖）：
+
+| 变量 | 默认 | 用途 |
+|---|---|---|
+| `MCOO_TEST_SERVER` | 仓库同级的 `testserver/` | 测试服目录 |
+| `MCOO_GRADLE_HOME` | `$env:GRADLE_USER_HOME` | Gradle 缓存（避免重复下载 MC / Fabric API） |
+| `MCOO_SHOTS` | 仓库同级的 `_shots/` | 截图输出 |
+
+> 脚本是 UTF-8 **带 BOM** 的 `.ps1`（PowerShell 5.1 按 ANSI 读无 BOM 的文件，
+> 中文注释会把 `param()` 解析坏，表现为「参数变成 null」）。改脚本后要保持 BOM。
 
 ## 5. mixin 纪律
 
