@@ -55,17 +55,12 @@ public abstract class AbstractGridScreen<S, B> extends AbstractScreen {
     /** 格子图标是 16x16 的贴图。 */
     private static final int ICON_SIZE = 16;
     /**
-     * 格子的配色：默认 / 悬停 / 选中 / 选中且悬停。
+     * 格子与功能按钮的配色：默认 / 悬停 / 选中 / 选中且悬停。
      * <p>
-     * 图标本身是浅色的，所以格子底色要压暗才看得清图标。
+     * 跟以前的轮盘一致 —— 都是**半透明**的深色（叠在被压暗的世界上），
+     * 图标本身是浅色，压暗了才看得清。
      */
     private static final ColorState CELL_COLOR_STATE = new ColorState(
-            new Color(0.25f, 0.25f, 0.25f, 0.80f),
-            new Color(0.38f, 0.38f, 0.38f, 0.90f),
-            new Color(0.60f, 0.60f, 0.60f, 0.95f),
-            new Color(0.18f, 0.18f, 0.18f, 0.95f),
-            new Color(0.48f, 0.48f, 0.48f, 1.00f));
-    private static final ColorState BUTTON_COLOR_STATE = new ColorState(
             new Color(0f, 0f, 0f, 0.42f),
             new Color(0f, 0f, 0f, 0.42f),
             new Color(0.24f, 0.24f, 0.24f, 0.50f),
@@ -474,10 +469,10 @@ public abstract class AbstractGridScreen<S, B> extends AbstractScreen {
                 renderer.renderRect(RenderLayers.GUI, x + CELL_SIZE - 1, y, x + CELL_SIZE, y + CELL_SIZE, WHITE_TEXT_COLOR, 0);
             }
 
-            // 底部的分组色条
+            // 底部的分组色条：颜色自带透明度，跟以前轮盘上的分组弧一样
             var tint = slot.getTintColor();
             if (tint != null) {
-                renderer.renderRect(RenderLayers.GUI, x, barY, x + CELL_SIZE, barY + CELL_BAR_HEIGHT, ColorUtils.setAlpha(tint.getRGB(), 255), 0);
+                renderer.renderRect(RenderLayers.GUI, x, barY, x + CELL_SIZE, barY + CELL_BAR_HEIGHT, tint.getRGB(), 0);
             }
 
             // 图标
@@ -520,15 +515,15 @@ public abstract class AbstractGridScreen<S, B> extends AbstractScreen {
                 var isActivated = button.isActivated();
                 var isHovered = x1 <= mouseCenterX && x2 >= mouseCenterX && y1 <= mouseCenterY && y2 >= mouseCenterY;
 
-                var color = BUTTON_COLOR_STATE.defaultColor();
+                var color = CELL_COLOR_STATE.defaultColor();
                 if (isActivated) {
-                    color = BUTTON_COLOR_STATE.activedColor();
+                    color = CELL_COLOR_STATE.activedColor();
                 }
                 if (isHovered) {
-                    color = BUTTON_COLOR_STATE.hoveredColor();
+                    color = CELL_COLOR_STATE.hoveredColor();
                 }
                 if (isActivated && isHovered) {
-                    color = BUTTON_COLOR_STATE.activedHoveredColor();
+                    color = CELL_COLOR_STATE.activedHoveredColor();
                 }
 
                 if (isHovered) {
