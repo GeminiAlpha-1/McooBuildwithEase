@@ -1,0 +1,23 @@
+classTweaker	v1	official
+
+# 26.2 起 Minecraft 不再混淆，Loom 1.18 使用 class tweaker 格式（access widener 的新名字）。
+# 格式：classTweaker <version> <namespace>，条目用 Tab 分隔。
+
+# BlockItem#getPlacementState 是 protected
+accessible	method	net/minecraft/world/item/BlockItem	getPlacementState	(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;
+
+# BucketItem#content 是 protected final
+accessible	field	net/minecraft/world/item/BucketItem	content	Lnet/minecraft/world/level/material/Fluid;
+
+# KeyMapping#key 是 protected
+accessible	field	net/minecraft/client/KeyMapping	key	Lcom/mojang/blaze3d/platform/InputConstants$Key;
+
+# AbstractButton#SPRITES 是 private static
+accessible	field	net/minecraft/client/gui/components/AbstractButton	SPRITES	Lnet/minecraft/client/gui/components/WidgetSprites;
+
+# AbstractClientPlayer#getPlayerInfo() 是 protected
+accessible	method	net/minecraft/client/player/AbstractClientPlayer	getPlayerInfo	()Lnet/minecraft/client/multiplayer/PlayerInfo;
+
+# Inventory#items / #selected 是 private
+accessible	field	net/minecraft/world/entity/player/Inventory	items	Lnet/minecraft/core/NonNullList;
+accessible	field	net/minecraft/world/entity/player/Inventory	selected	I

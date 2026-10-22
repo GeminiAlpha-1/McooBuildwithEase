@@ -1,0 +1,87 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = project.archives_base_name
+}
+
+version = project.mod_version
+group = project.maven_group
+
+loom {
+	// 26.2 起 Loom 只在编译期应用「显式声明」的 access widener，
+	// 仅在 fabric.mod.json 里写 accessWidener 字段是不够的。
+	accessWidenerPath = file("src/main/resources/mcoo_build_with_ease.classtweaker")
+
+	runs {
+		client {
+			// 开发客户端可以复用本机已下载的资源，避免重复下载几百 MB：
+			//   gradlew runClient -PmcAssetsDir=C:/path/to/.minecraft/assets
+			if (project.hasProperty('mcAssetsDir')) {
+				programArgs '--assetsDir', project.property('mcAssetsDir')
+			}
+			// 自动连服（自测用）：
+			//   gradlew runClient -PmcQuickPlay=127.0.0.1:25599
+			if (project.hasProperty('mcQuickPlay')) {
+				programArgs '--quickPlayMultiplayer', project.property('mcQuickPlay')
+			}
+		}
+	}
+}
+
+repositories {
+	// Loom 会自动补齐 Minecraft 与 Fabric 的仓库。
+	// 额外挂一个国内 Central 镜像：本机出口 IP 被 Maven Central 403（Sonatype 反滥用），
+	// 镜像作为 Central 的等价替代，避免依赖解析卡死。
+	maven {
+		name = 'Central Mirror'
+		url = 'https://maven.aliyun.com/repository/public'
+	}
+}
+
+dependencies {
+	// 【关键】26.2 起 Minecraft 不再混淆，直接对官方未混淆 jar 编译，
+	// 因此没有 `mappings` 那一行 —— API 名称就是 Mojang 官方名。
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// 上游 common-api 的 ServiceLoader 机制依赖它生成 META-INF/services/
+	annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+	compileOnly 'com.google.auto.service:auto-service:1.1.1'
+
+	// night-config：配置读写（common-api 的 Config / ConfigSpec 体系）
+	// 上游用 shadow 插件把它重定位进 dev.huskuraft.universal.api.nightconfig，
+	// 这里改为正常依赖 + 业务层 import 改回 com.electronwill.nightconfig，
+	// 省掉一个插件依赖，效果等价。
+	implementation 'com.electronwill.night-config:core:3.6.7'
+	implementation 'com.electronwill.night-config:toml:3.6.7'
+	implementation 'com.electronwill.night-config:json:3.6.7'
+	include 'com.electronwill.night-config:core:3.6.7'
+	include 'com.electronwill.night-config:toml:3.6.7'
+	include 'com.electronwill.night-config:json:3.6.7'
+
+	compileOnly 'io.netty:netty-all:4.1.109.Final'
+	compileOnly 'org.slf4j:slf4j-api:2.0.13'
+	compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	// Minecraft 26.2 要求 Java 25
+	it.options.release = 25
+	it.options.encoding = 'UTF-8'
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}

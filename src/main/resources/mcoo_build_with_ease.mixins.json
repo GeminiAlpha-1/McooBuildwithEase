@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "priority": 1100,
+  "package": "dev.huskuraft.universal.fabric.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "MinecraftMixin"
+  ]
+}

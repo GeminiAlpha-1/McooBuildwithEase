@@ -1,0 +1,31 @@
+{
+    "schemaVersion": 1,
+    "id": "mcoo_build_with_ease",
+    "version": "${version}",
+    "name": "McooBuildwithEase",
+    "description": "批量建造模组：13 种建造模式、替换模式、变换器（含物品随机化器）、撤销重做、剪贴板。服务端安装即可，客户端未安装的玩家也能正常进服。",
+    "authors": [
+        "McooServers"
+    ],
+    "license": "LGPL-3.0",
+    "contact": {},
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "dev.huskuraft.universal.fabric.platform.FabricInitializer"
+        ],
+        "client": [
+            "dev.huskuraft.universal.fabric.platform.FabricClientInitializer"
+        ]
+    },
+    "mixins": [
+        "mcoo_build_with_ease.mixins.json"
+    ],
+    "accessWidener": "mcoo_build_with_ease.classtweaker",
+    "depends": {
+        "fabricloader": ">=0.19.3",
+        "minecraft": "~26.2",
+        "java": ">=25",
+        "fabric-api": ">=0.153.0"
+    }
+}

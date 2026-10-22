@@ -1,0 +1,22 @@
+.gradle/
+build/
+run/
+out/
+logs/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# 本地测试服（从 McooServerFeatures/testserver 复制的二进制，不入库）
+testserver/
+
+# 操作系统
+.DS_Store
+Thumbs.db

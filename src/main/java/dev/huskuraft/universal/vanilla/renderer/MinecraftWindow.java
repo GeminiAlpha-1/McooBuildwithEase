@@ -1,0 +1,64 @@
+package dev.huskuraft.universal.vanilla.renderer;
+
+import org.lwjgl.glfw.GLFW;
+
+import com.mojang.blaze3d.platform.InputConstants;
+
+import dev.huskuraft.universal.api.renderer.Window;
+
+/**
+ * 26.2 的 {@code com.mojang.blaze3d.platform.Window}：
+ * {@code getGuiScale()} 返回 int，GLFW 句柄改由 {@code handle()} 提供。
+ */
+public record MinecraftWindow(
+        com.mojang.blaze3d.platform.Window refs
+) implements Window {
+
+    @Override
+    public int hashCode() {
+        return refs.hashCode();
+    }
+
+    @Override
+    public int getWidth() {
+        return refs.getWidth();
+    }
+
+    @Override
+    public int getHeight() {
+        return refs.getHeight();
+    }
+
+    @Override
+    public int getGuiScaledWidth() {
+        return refs.getGuiScaledWidth();
+    }
+
+    @Override
+    public int getGuiScaledHeight() {
+        return refs.getGuiScaledHeight();
+    }
+
+    @Override
+    public double getGuiScaledFactor() {
+        return refs.getGuiScale();
+    }
+
+    @Override
+    public boolean isKeyDown(int key) {
+        try {
+            return InputConstants.isKeyDown(refs, key);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean isMouseButtonDown(int button) {
+        try {
+            return GLFW.glfwGetMouseButton(refs.handle(), button) == 1;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
