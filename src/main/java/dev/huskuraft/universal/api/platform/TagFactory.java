@@ -1,6 +1,9 @@
 package dev.huskuraft.universal.api.platform;
 
+import dev.huskuraft.universal.api.tag.ByteArrayTag;
+import dev.huskuraft.universal.api.tag.IntArrayTag;
 import dev.huskuraft.universal.api.tag.ListTag;
+import dev.huskuraft.universal.api.tag.LongArrayTag;
 import dev.huskuraft.universal.api.tag.StringTag;
 import dev.huskuraft.universal.api.tag.NumericTag;
 import dev.huskuraft.universal.api.tag.RecordTag;
@@ -31,5 +34,10 @@ public interface TagFactory {
 
     NumericTag newPrimitive(double value);
 
+    ByteArrayTag newByteArray(byte[] value);
+
+    IntArrayTag newIntArray(int[] value);
+
+    LongArrayTag newLongArray(long[] value);
 
 }

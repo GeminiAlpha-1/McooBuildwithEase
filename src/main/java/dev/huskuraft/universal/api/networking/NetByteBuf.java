@@ -18,7 +18,10 @@ import dev.huskuraft.universal.api.math.Vector2i;
 import dev.huskuraft.universal.api.math.Vector3d;
 import dev.huskuraft.universal.api.math.Vector3i;
 import dev.huskuraft.universal.api.platform.PlatformReference;
+import dev.huskuraft.universal.api.tag.ByteArrayTag;
+import dev.huskuraft.universal.api.tag.IntArrayTag;
 import dev.huskuraft.universal.api.tag.ListTag;
+import dev.huskuraft.universal.api.tag.LongArrayTag;
 import dev.huskuraft.universal.api.tag.NumericTag;
 import dev.huskuraft.universal.api.tag.RecordTag;
 import dev.huskuraft.universal.api.tag.StringTag;
@@ -249,6 +252,54 @@ public final class NetByteBuf extends WrappedByteBuf {
         writeTag(tag);
     }
 
+    // ---- NBT 数组标签的读写 ----
+    // Netty 的 ByteBuf 只有 readBytes/writeBytes，没有专门的数组方法，
+    // 所以这里自己实现：先写长度（varInt，与 MC NBT 的格式一致），再写数据。
+
+    public byte[] readByteArray() {
+        var length = readVarInt();
+        var value = new byte[length];
+        readBytes(value);
+        return value;
+    }
+
+    public void writeByteArray(byte[] value) {
+        writeVarInt(value.length);
+        writeBytes(value);
+    }
+
+    public int[] readIntArray() {
+        var length = readVarInt();
+        var value = new int[length];
+        for (int i = 0; i < length; i++) {
+            value[i] = readInt();
+        }
+        return value;
+    }
+
+    public void writeIntArray(int[] value) {
+        writeVarInt(value.length);
+        for (var item : value) {
+            writeInt(item);
+        }
+    }
+
+    public long[] readLongArray() {
+        var length = readVarInt();
+        var value = new long[length];
+        for (int i = 0; i < length; i++) {
+            value[i] = readLong();
+        }
+        return value;
+    }
+
+    public void writeLongArray(long[] value) {
+        writeVarInt(value.length);
+        for (var item : value) {
+            writeLong(item);
+        }
+    }
+
     public Tag readTag() {
         return switch (readByte()) {
             case Tag.TAG_BYTE -> NumericTag.of(readByte());
@@ -260,6 +311,9 @@ public final class NetByteBuf extends WrappedByteBuf {
             case Tag.TAG_STRING -> StringTag.of(readString());
             case Tag.TAG_LIST -> ListTag.of(readList(NetByteBuf::readTag));
             case Tag.TAG_COMPOUND -> RecordTag.of(readMap(NetByteBuf::readString, NetByteBuf::readTag));
+            case Tag.TAG_BYTE_ARRAY -> ByteArrayTag.of(readByteArray());
+            case Tag.TAG_INT_ARRAY -> IntArrayTag.of(readIntArray());
+            case Tag.TAG_LONG_ARRAY -> LongArrayTag.of(readLongArray());
             default -> throw new IllegalArgumentException("Unsupported tag type!");
         };
     }
@@ -276,6 +330,9 @@ public final class NetByteBuf extends WrappedByteBuf {
             case Tag.TAG_STRING -> writeString(tag.asString().getString());
             case Tag.TAG_LIST -> writeList(tag.asList().stream().toList(), NetByteBuf::writeTag);
             case Tag.TAG_COMPOUND -> writeMap(tag.asRecord().getTags(), NetByteBuf::writeString, NetByteBuf::writeTag);
+            case Tag.TAG_BYTE_ARRAY -> writeByteArray(tag.asByteArray().getAsByteArray());
+            case Tag.TAG_INT_ARRAY -> writeIntArray(tag.asIntArray().getAsIntArray());
+            case Tag.TAG_LONG_ARRAY -> writeLongArray(tag.asLongArray().getAsLongArray());
             default -> throw new IllegalArgumentException("Unsupported tag!");
         }
     }

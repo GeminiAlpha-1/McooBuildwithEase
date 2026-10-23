@@ -3,11 +3,17 @@ package dev.huskuraft.universal.vanilla.platform;
 import com.google.auto.service.AutoService;
 
 import dev.huskuraft.universal.api.platform.TagFactory;
+import dev.huskuraft.universal.api.tag.ByteArrayTag;
+import dev.huskuraft.universal.api.tag.IntArrayTag;
 import dev.huskuraft.universal.api.tag.ListTag;
+import dev.huskuraft.universal.api.tag.LongArrayTag;
 import dev.huskuraft.universal.api.tag.StringTag;
 import dev.huskuraft.universal.api.tag.NumericTag;
 import dev.huskuraft.universal.api.tag.RecordTag;
+import dev.huskuraft.universal.vanilla.tag.MinecraftByteArrayTag;
+import dev.huskuraft.universal.vanilla.tag.MinecraftIntArrayTag;
 import dev.huskuraft.universal.vanilla.tag.MinecraftListTag;
+import dev.huskuraft.universal.vanilla.tag.MinecraftLongArrayTag;
 import dev.huskuraft.universal.vanilla.tag.MinecraftStringTag;
 import dev.huskuraft.universal.vanilla.tag.MinecraftNumericTag;
 import dev.huskuraft.universal.vanilla.tag.MinecraftRecordTag;
@@ -70,5 +76,20 @@ public final class MinecraftTagFactory implements TagFactory {
     @Override
     public NumericTag newPrimitive(double value) {
         return new MinecraftNumericTag(DoubleTag.valueOf(value));
+    }
+
+    @Override
+    public ByteArrayTag newByteArray(byte[] value) {
+        return new MinecraftByteArrayTag(new net.minecraft.nbt.ByteArrayTag(value));
+    }
+
+    @Override
+    public IntArrayTag newIntArray(int[] value) {
+        return new MinecraftIntArrayTag(new net.minecraft.nbt.IntArrayTag(value));
+    }
+
+    @Override
+    public LongArrayTag newLongArray(long[] value) {
+        return new MinecraftLongArrayTag(new net.minecraft.nbt.LongArrayTag(value));
     }
 }

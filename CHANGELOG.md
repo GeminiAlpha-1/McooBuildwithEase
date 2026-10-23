@@ -6,6 +6,27 @@
 中间两位是上线以来的累计计数，不随版本重置：功能数统计用户可感知的新增功能，
 修复数统计已修复的问题数。目标 Minecraft 跨年时年份位加一，功能数加一（移植本身计为一个功能），修复数保持不变。
 
+## 26.3.8+26.2
+
+### 修复
+
+- **启用剪贴板后无法复制结构**：服务端复制操作执行成功、提示「复制成功」，
+  但快照发不出去 —— 历史列表始终为空，右键也放不出任何东西。
+  原因是网络层的 NBT 序列化**不支持数组标签**：
+  方块实体的 NBT 里只要含 byte array（潜影盒的物品栏等），
+  序列化就抛 `IllegalArgumentException: Unsupported tag!`，
+  服务端在 `BatchBuildSession#saveClipboard` 里中断，快照包永远发不出去。
+
+  Minecraft 26.2 的 NBT 有 13 种标签类型，此前只支持其中 9 种，
+  缺 `byte array` / `int array` / `long array`（26.2 新增）。
+  现补齐这三种：
+  - common-api 新增 `ByteArrayTag` / `IntArrayTag` / `LongArrayTag` 三个标签接口；
+  - `NetByteBuf` 的标签读写支持这三种类型（长度用 varInt，与 MC NBT 格式一致）；
+  - vanilla 层的标签工厂与包装类相应实现。
+
+  附带加了内置自检（`-Dmcoo.selfTest=nbt`）：构造含三种数组标签的 NBT 做一次往返比对，
+  日志里输出 `[self-test] NBT 数组标签往返: 通过`。
+
 ## 26.3.7+26.2
 
 ### 修复

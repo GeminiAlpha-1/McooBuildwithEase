@@ -35,6 +35,18 @@ public interface Tag extends PlatformReference {
         return (NumericTag) this;
     }
 
+    default ByteArrayTag asByteArray() {
+        return (ByteArrayTag) this;
+    }
+
+    default IntArrayTag asIntArray() {
+        return (IntArrayTag) this;
+    }
+
+    default LongArrayTag asLongArray() {
+        return (LongArrayTag) this;
+    }
+
     byte getId();
 
     String getAsString();

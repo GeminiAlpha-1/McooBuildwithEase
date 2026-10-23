@@ -36,6 +36,10 @@ loom {
 			if (project.hasProperty('mcDebugGui')) {
 				vmArgs "-Dmcoo.debugGui=${project.property('mcDebugGui')}"
 			}
+			// 调试用：跑内置自检（-Dmcoo.selfTest=nbt 验证 NBT 数组标签的序列化）
+			if (project.hasProperty('mcSelfTest')) {
+				vmArgs "-Dmcoo.selfTest=${project.property('mcSelfTest')}"
+			}
 		}
 	}
 }
