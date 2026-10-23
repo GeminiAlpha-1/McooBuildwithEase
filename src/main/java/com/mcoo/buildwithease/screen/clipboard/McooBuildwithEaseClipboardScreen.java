@@ -79,6 +79,11 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
         this.snapshotWidget = addWidget(new StructureSnapshotWidget(getEntrance(), getLeft() + PADDINGS_H, getTop() + PANEL_TITLE_HEIGHT_1, getWidth() - PADDINGS_H * 2, getHeight() - PANEL_TITLE_HEIGHT_1 - PANEL_BUTTON_ROW_HEIGHT_2, clipboard.snapshot()));
         this.textWidget = addWidget(new MessageTextWidget(getEntrance(), getLeft() + AbstractPanelScreen.PADDINGS_H, getTop() + PANEL_TITLE_HEIGHT_1, getWidth() - AbstractPanelScreen.PADDINGS_H * 2, getHeight() - PANEL_TITLE_HEIGHT_1 - PANEL_BUTTON_ROW_HEIGHT_2, Text.translate("mcoo_build_with_ease.clipboard.no_structure"), MessageTextWidget.Gravity.CENTER));
 
+        // 「视角」按钮浮在预览区的右上角：改绕轴朝向、回默认视角
+        addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.clipboard.viewpoint"), button -> {
+            new McooBuildwithEaseViewpointScreen(getEntrance(), this.snapshotWidget).attach();
+        }).setBounds(this.snapshotWidget.getRight() - 46 - 2, this.snapshotWidget.getTop() + 2, 46, Button.DEFAULT_HEIGHT).build());
+
 //        addWidget(Button.builder(getEntrance(), Text.text("Edit"), button -> {
 //        }).setBounds(this.snapshotWidget.getRight() - Button.DEFAULT_HEIGHT - 2, this.snapshotWidget.getTop() + 2 * 1 + Button.DEFAULT_HEIGHT * 0, Button.DEFAULT_HEIGHT, Button.DEFAULT_HEIGHT).build());
 //

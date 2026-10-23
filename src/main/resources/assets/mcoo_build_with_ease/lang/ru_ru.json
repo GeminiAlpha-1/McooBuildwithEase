@@ -560,10 +560,17 @@
   "mcoo_build_with_ease.clipboard.download.success": "Exported to %s",
   "mcoo_build_with_ease.clipboard.download.failed": "Export failed: %s",
   "mcoo_build_with_ease.clipboard.download.empty": "The clipboard is empty",
+  "mcoo_build_with_ease.clipboard.download.to_downloads": "Сохранить в папку Загрузки",
   "mcoo_build_with_ease.button.new_folder": "New folder",
   "mcoo_build_with_ease.button.parent_folder": "..",
   "mcoo_build_with_ease.clipboard.download.save_title": "Save structure",
   "mcoo_build_with_ease.clipboard.download.no_name": "The file name cannot be empty",
+  "mcoo_build_with_ease.clipboard.viewpoint": "Вид",
+  "mcoo_build_with_ease.clipboard.viewpoint.title": "Вид",
+  "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "Поворот на 90° вокруг оси %s",
+  "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "Поворот на 90° вокруг оси %s",
+  "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "Поворот на 90° вокруг оси %s",
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Сбросить вид",
   "m": "c",
   "C": "r"
 }

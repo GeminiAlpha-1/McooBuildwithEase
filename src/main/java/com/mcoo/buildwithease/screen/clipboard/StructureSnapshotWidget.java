@@ -29,6 +29,10 @@ public final class StructureSnapshotWidget extends AbstractWidget {
     private static final float ZOOM_SPEED = 0.15F;
     private static final float MIN_ZOOM = 0.2F;
     private static final float MAX_ZOOM = 8.0F;
+    /** 默认偏航角（度）。 */
+    private static final float DEFAULT_YAW = 45.0F;
+    /** 默认俯仰角（度）。 */
+    private static final float DEFAULT_PITCH = 30.0F;
 
     private Snapshot snapshot;
     /**
@@ -40,15 +44,18 @@ public final class StructureSnapshotWidget extends AbstractWidget {
     /** 方块列表对应的结构指纹，用来判断是否需要重建。 */
     private int blocksFingerprint;
     /** 相机：偏航角（度）。 */
-    private float yaw = 45.0F;
+    private float yaw = DEFAULT_YAW;
     /** 相机：俯仰角（度）。 */
-    private float pitch = 30.0F;
+    private float pitch = DEFAULT_PITCH;
     /** 相机：缩放（1 = 正好铺满视口）。 */
     private float zoom = 1.0F;
     /** 相机：水平平移（逻辑像素）。 */
     private float panX = 0.0F;
     /** 相机：垂直平移（逻辑像素）。 */
     private float panY = 0.0F;
+    /** 朝向修正：绕世界 X/Y/Z 轴各转多少个 90°（0 = 默认朝向）。 */
+    private dev.huskuraft.universal.api.renderer.PreviewOrientation orientation =
+            dev.huskuraft.universal.api.renderer.PreviewOrientation.DEFAULT;
     /** 鼠标是否还按着。 */
     private boolean dragging = false;
 
@@ -83,8 +90,28 @@ public final class StructureSnapshotWidget extends AbstractWidget {
         // 这样方块实体（钟、箱子、陶罐、旗帜…）才能被正确画出来。
         renderer.renderModelPreview(
                 new dev.huskuraft.universal.api.renderer.PreviewRenderRequest(
-                        blocks, new PreviewCamera(yaw, pitch, zoom, panX, panY)),
+                        blocks, new PreviewCamera(yaw, pitch, zoom, panX, panY), orientation),
                 getLeft(), getTop(), getWidth(), getHeight());
+    }
+
+    /**
+     * 绕世界某根轴把结构转 90°。
+     *
+     * @param axis  0=X，1=Y，2=Z
+     * @param steps 转多少个 90°（正数按右手定则）
+     */
+    public void rotateAxis(int axis, int steps) {
+        this.orientation = this.orientation.rotate(axis, steps);
+    }
+
+    /** 回到默认视角：偏航 45°、俯仰 30°、缩放 100%、不平移、没有朝向修正。 */
+    public void resetView() {
+        this.yaw = DEFAULT_YAW;
+        this.pitch = DEFAULT_PITCH;
+        this.zoom = 1.0F;
+        this.panX = 0.0F;
+        this.panY = 0.0F;
+        this.orientation = dev.huskuraft.universal.api.renderer.PreviewOrientation.DEFAULT;
     }
 
     /**

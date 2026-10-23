@@ -24,7 +24,7 @@ public class McooBuildwithEaseClipboardDownloadScreen extends AbstractPanelScree
 
     public McooBuildwithEaseClipboardDownloadScreen(Entrance entrance, Snapshot snapshot) {
         super(entrance, Text.translate("mcoo_build_with_ease.clipboard.download.title"), PANEL_WIDTH_60,
-                PANEL_TITLE_HEIGHT_1 + PANEL_BUTTON_ROW_HEIGHT_4);
+                PANEL_TITLE_HEIGHT_1 + PANEL_BUTTON_ROW_HEIGHT_5);
         this.snapshot = snapshot;
     }
 
@@ -40,17 +40,24 @@ public class McooBuildwithEaseClipboardDownloadScreen extends AbstractPanelScree
 
         addWidget(Button.builder(getEntrance(),
                 Text.translate("mcoo_build_with_ease.clipboard.download.litematic"), button -> {
-                    openSaveScreen(StructureExporter.Format.LITEMATIC);
-                }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 3f, 0f, 1f).build());
+                    openSaveScreen(List.of(StructureExporter.Format.LITEMATIC));
+                }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 4f, 0f, 1f).build());
 
         addWidget(Button.builder(getEntrance(),
                 Text.translate("mcoo_build_with_ease.clipboard.download.worldedit"), button -> {
-                    openSaveScreen(StructureExporter.Format.WORLDEDIT);
-                }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 2f, 0f, 1f).build());
+                    openSaveScreen(List.of(StructureExporter.Format.WORLDEDIT));
+                }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 3f, 0f, 1f).build());
 
         addWidget(Button.builder(getEntrance(),
                 Text.translate("mcoo_build_with_ease.clipboard.download.axiom"), button -> {
-                    openSaveScreen(StructureExporter.Format.AXIOM);
+                    openSaveScreen(List.of(StructureExporter.Format.AXIOM));
+                }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 2f, 0f, 1f).build());
+
+        // 「下载到电脑的下载文件夹」：起始目录是系统的下载文件夹，保存时两种格式一起导出
+        addWidget(Button.builder(getEntrance(),
+                Text.translate("mcoo_build_with_ease.clipboard.download.to_downloads"), button -> {
+                    openSaveScreen(List.of(StructureExporter.Format.LITEMATIC, StructureExporter.Format.WORLDEDIT),
+                            downloadsDirectory());
                 }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0f, 1f).build());
 
         addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.cancel"), button -> {
@@ -58,7 +65,35 @@ public class McooBuildwithEaseClipboardDownloadScreen extends AbstractPanelScree
         }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 0f, 1f).build());
     }
 
-    private void openSaveScreen(StructureExporter.Format format) {
+    /**
+     * 系统里「下载」文件夹的位置。
+     * <p>
+     * Windows / macOS / Linux 上一般叫 {@code Downloads}；
+     * 个别本地化环境叫「下载」，两个都找一下。
+     */
+    private static java.nio.file.Path downloadsDirectory() {
+        var home = java.nio.file.Path.of(System.getProperty("user.home", "."));
+        for (var name : new String[]{"Downloads", "下载"}) {
+            var candidate = home.resolve(name);
+            if (java.nio.file.Files.isDirectory(candidate)) {
+                return candidate;
+            }
+        }
+        return home.resolve("Downloads");
+    }
+
+    private void openSaveScreen(List<StructureExporter.Format> formats) {
+        openSaveScreen(formats, null);
+    }
+
+    /**
+     * 打开内置的文件管理器。
+     *
+     * @param formats   要导出的格式（可以多个，保存时一起导出）
+     * @param directory 起始目录；为 null 就用该格式的默认目录
+     *                  （装了对应的 mod 用它的目录，没装就放模组自己的导出目录）
+     */
+    private void openSaveScreen(List<StructureExporter.Format> formats, java.nio.file.Path directory) {
         if (snapshot == null || snapshot.isEmpty()) {
             getEntrance().getClient().getPlayer().sendMessage(McooBuildwithEase.getSystemMessage(
                     Text.translate("mcoo_build_with_ease.clipboard.download.empty")));
@@ -74,8 +109,8 @@ public class McooBuildwithEaseClipboardDownloadScreen extends AbstractPanelScree
                         blockData.blockState()))
                 .toList();
 
-        new McooBuildwithEaseSaveFileScreen(getEntrance(), format, defaultFileName(),
-                box.sizeX(), box.sizeY(), box.sizeZ(), List.copyOf(blocks)).attach();
+        new McooBuildwithEaseSaveFileScreen(getEntrance(), formats, defaultFileName(),
+                box.sizeX(), box.sizeY(), box.sizeZ(), List.copyOf(blocks), directory).attach();
     }
 
     /** 结构的包围盒（坐标以左下角为原点）。 */

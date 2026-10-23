@@ -561,10 +561,17 @@
   "mcoo_build_with_ease.clipboard.download.success": "Exported to %s",
   "mcoo_build_with_ease.clipboard.download.failed": "Export failed: %s",
   "mcoo_build_with_ease.clipboard.download.empty": "The clipboard is empty",
+  "mcoo_build_with_ease.clipboard.download.to_downloads": "Download to computer's Downloads folder",
   "mcoo_build_with_ease.button.new_folder": "New folder",
   "mcoo_build_with_ease.button.parent_folder": "..",
   "mcoo_build_with_ease.clipboard.download.save_title": "Save structure",
   "mcoo_build_with_ease.clipboard.download.no_name": "The file name cannot be empty",
+  "mcoo_build_with_ease.clipboard.viewpoint": "View",
+  "mcoo_build_with_ease.clipboard.viewpoint.title": "Viewpoint",
+  "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "Rotate 90° around %s axis",
+  "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "Rotate 90° around %s axis",
+  "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "Rotate 90° around %s axis",
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Reset view",
   "m": "c",
   "C": "r"
 }

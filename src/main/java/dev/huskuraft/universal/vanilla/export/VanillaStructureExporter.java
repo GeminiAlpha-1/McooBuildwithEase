@@ -43,6 +43,14 @@ public class VanillaStructureExporter implements StructureExporter {
     public static final String EXPORT_DIR = "mcoo_build_with_ease_exports";
     /** Axiom 的蓝图目录。 */
     public static final String AXIOM_BLUEPRINT_DIR = "Axiom/blueprints";
+    /** 投影 / WorldEdit 的工程文件目录（社区惯例放在实例目录下）。 */
+    public static final String SCHEMATICS_DIR = "schematics";
+    /** 投影（Malte's Litematica）的 mod id。 */
+    private static final String MOD_LITEMATICA = "litematica";
+    /** WorldEdit 的 mod id。 */
+    private static final String MOD_WORLDEDIT = "worldedit";
+    /** Axiom 的 mod id。 */
+    private static final String MOD_AXIOM = "axiom";
 
     @Override
     public Path export(Path directory, String fileName0, int sizeX, int sizeY, int sizeZ, List<Block> blocks, Format format) {
@@ -68,10 +76,21 @@ public class VanillaStructureExporter implements StructureExporter {
     @Override
     public Path defaultDirectory(Format format) {
         var gameDir = Minecraft.getInstance().gameDirectory.toPath();
-        // Axiom 的那份默认放进它的蓝图目录，其余放进统一的导出目录
-        return format == Format.AXIOM
-                ? gameDir.resolve(AXIOM_BLUEPRINT_DIR)
-                : gameDir.resolve(EXPORT_DIR);
+        // 目标目录：**装了就用它自己的目录，没装就放模组自己的导出目录**。
+        // 这样玩家点「下载投影」时，文件直接落在投影的 schematics 目录里，投影立刻就能看到；
+        // 没装投影的话也不会丢在一个没人认识的地方。
+        var platform = dev.huskuraft.universal.api.platform.Platform.getInstance();
+        return switch (format) {
+            case LITEMATIC -> platform.findMod(MOD_LITEMATICA).isPresent()
+                    ? gameDir.resolve(SCHEMATICS_DIR)
+                    : gameDir.resolve(EXPORT_DIR);
+            case WORLDEDIT -> platform.findMod(MOD_WORLDEDIT).isPresent()
+                    ? gameDir.resolve(SCHEMATICS_DIR)
+                    : gameDir.resolve(EXPORT_DIR);
+            case AXIOM -> platform.findMod(MOD_AXIOM).isPresent()
+                    ? gameDir.resolve(AXIOM_BLUEPRINT_DIR)
+                    : gameDir.resolve(EXPORT_DIR);
+        };
     }
 
     // ------------------------------------------------------------------

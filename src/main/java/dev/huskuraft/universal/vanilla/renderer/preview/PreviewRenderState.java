@@ -4,6 +4,7 @@ import java.util.List;
 
 import dev.huskuraft.universal.api.renderer.PreviewBlock;
 import dev.huskuraft.universal.api.renderer.PreviewCamera;
+import dev.huskuraft.universal.api.renderer.PreviewOrientation;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 
@@ -14,18 +15,20 @@ import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
  * 调用 {@link PreviewPictureInPictureRenderer#renderToTexture} 把 3D 内容画进去，
  * 再把纹理贴回 GUI 的对应矩形。
  *
- * @param blocks  要渲染的方块（含方块实体 NBT）
- * @param camera  相机
- * @param x0      视口左边
- * @param y0      视口上边
- * @param x1      视口右边
- * @param y1      视口下边
- * @param scissor 裁剪区
- * @param bounds  包围盒
+ * @param blocks      要渲染的方块（含方块实体 NBT）
+ * @param camera      相机
+ * @param orientation 朝向修正（绕世界轴各转多少个 90°）
+ * @param x0          视口左边
+ * @param y0          视口上边
+ * @param x1          视口右边
+ * @param y1          视口下边
+ * @param scissor     裁剪区
+ * @param bounds      包围盒
  */
 public record PreviewRenderState(
         List<PreviewBlock> blocks,
         PreviewCamera camera,
+        PreviewOrientation orientation,
         int x0,
         int y0,
         int x1,
@@ -77,17 +80,8 @@ public record PreviewRenderState(
         double centerY = (minY + maxY + 1) / 2.0;
         double centerZ = (minZ + maxZ + 1) / 2.0;
 
-        // 旋转后的投影范围（以结构中心为原点 —— 和 renderToTexture 里的变换一致）
-        //
-        // 【旋转顺序】渲染时用的是 Quaternionf.rotateXYZ(180° + 俯仰, 偏航, 0)，
-        // 也就是 Rx(180° + pitch) × Ry(偏航)：作用到向量上是「先绕 Y（偏航）再绕 X」。
-        // 这里必须用同样的顺序和同样的角度，否则算出来的投影范围是错的（缩放会偏小/偏大）。
-        var yaw = (float) Math.toRadians(camera.yaw());
-        var pitch = (float) Math.toRadians(camera.pitch());
-        var cosY = (float) Math.cos(yaw);
-        var sinY = (float) Math.sin(yaw);
-        var cosX = (float) Math.cos(pitch);
-        var sinX = (float) Math.sin(pitch);
+        // 旋转矩阵（和渲染那边共用同一份，角度不一致会导致缩放算错）
+        var m = PreviewRotation.matrix(camera, orientation);
 
         float minPX = Float.MAX_VALUE, minPY = Float.MAX_VALUE;
         float maxPX = -Float.MAX_VALUE, maxPY = -Float.MAX_VALUE;
@@ -97,12 +91,9 @@ public record PreviewRenderState(
                 double wx = position.x() + ((corner & 1) == 0 ? 0 : 1) - centerX;
                 double wy = position.y() + ((corner & 2) == 0 ? 0 : 1) - centerY;
                 double wz = position.z() + ((corner & 4) == 0 ? 0 : 1) - centerZ;
-                // 绕 Y 轴（偏航）—— 先
-                double rx = wx * cosY + wz * sinY;
-                double rz = -wx * sinY + wz * cosY;
-                // 绕 X 轴（180° + 俯仰）—— 后
-                //   cos(180°+p) = -cos p，sin(180°+p) = -sin p
-                double ry = -wy * cosX + rz * sinX;
+                // 第 0 行 → 视图的 X，第 1 行 → 视图的 Y
+                double rx = m[0] * wx + m[1] * wy + m[2] * wz;
+                double ry = m[3] * wx + m[4] * wy + m[5] * wz;
                 minPX = Math.min(minPX, (float) rx);
                 maxPX = Math.max(maxPX, (float) rx);
                 minPY = Math.min(minPY, (float) ry);

@@ -561,10 +561,17 @@
   "mcoo_build_with_ease.clipboard.download.success": "已导出到 %s",
   "mcoo_build_with_ease.clipboard.download.failed": "导出失败：%s",
   "mcoo_build_with_ease.clipboard.download.empty": "剪贴板里没有结构",
+  "mcoo_build_with_ease.clipboard.download.to_downloads": "下载到电脑的下载文件夹",
   "mcoo_build_with_ease.button.new_folder": "新建文件夹",
   "mcoo_build_with_ease.button.parent_folder": "..",
   "mcoo_build_with_ease.clipboard.download.save_title": "保存结构",
   "mcoo_build_with_ease.clipboard.download.no_name": "文件名不能为空",
+  "mcoo_build_with_ease.clipboard.viewpoint": "视角",
+  "mcoo_build_with_ease.clipboard.viewpoint.title": "视角",
+  "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "绕 %s 轴旋转 90°",
+  "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "绕 %s 轴旋转 90°",
+  "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "绕 %s 轴旋转 90°",
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "回到默认视角",
   "m": "c",
   "用": "上"
 }

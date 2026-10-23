@@ -31,7 +31,7 @@ public class McooBuildwithEaseSaveFileScreen extends AbstractPanelScreen {
     private static final int LIST_HEIGHT = 140;
     private static final int EDIT_HEIGHT = 20;
 
-    private final StructureExporter.Format format;
+    private final List<StructureExporter.Format> formats;
     private final String defaultFileName;
     private final int sizeX;
     private final int sizeY;
@@ -45,14 +45,26 @@ public class McooBuildwithEaseSaveFileScreen extends AbstractPanelScreen {
 
     public McooBuildwithEaseSaveFileScreen(Entrance entrance, StructureExporter.Format format, String defaultFileName,
                                          int sizeX, int sizeY, int sizeZ, List<StructureExporter.Block> blocks) {
+        this(entrance, List.of(format), defaultFileName, sizeX, sizeY, sizeZ, blocks, null);
+    }
+
+    /**
+     * @param formats      要导出的格式（一个就是单格式，多个就一次全导）
+     * @param directory    起始目录；为 null 就用该格式的默认目录
+     */
+    public McooBuildwithEaseSaveFileScreen(Entrance entrance, List<StructureExporter.Format> formats, String defaultFileName,
+                                         int sizeX, int sizeY, int sizeZ, List<StructureExporter.Block> blocks,
+                                         Path directory) {
         super(entrance, Text.translate("mcoo_build_with_ease.clipboard.download.save_title"), PANEL_WIDTH_60, PANEL_HEIGHT_FULL);
-        this.format = format;
+        this.formats = List.copyOf(formats);
         this.defaultFileName = defaultFileName;
         this.sizeX = sizeX;
         this.sizeY = sizeY;
         this.sizeZ = sizeZ;
         this.blocks = blocks;
-        this.directory = PlatformLoader.getSingleton(StructureExporter.class).defaultDirectory(format);
+        this.directory = directory != null
+                ? directory
+                : PlatformLoader.getSingleton(StructureExporter.class).defaultDirectory(this.formats.get(0));
     }
 
     @Override
@@ -150,18 +162,25 @@ public class McooBuildwithEaseSaveFileScreen extends AbstractPanelScreen {
                     Text.translate("mcoo_build_with_ease.clipboard.download.no_name")));
             return;
         }
-        try {
-            var path = PlatformLoader.getSingleton(StructureExporter.class)
-                    .export(this.directory, name, this.sizeX, this.sizeY, this.sizeZ, this.blocks, this.format);
-            player.sendMessage(McooBuildwithEase.getSystemMessage(
-                    Text.translate("mcoo_build_with_ease.clipboard.download.success", path.toString())));
-            detach();
-        } catch (Exception exception) {
-            McooBuildwithEase.LOGGER.error("Failed to export clipboard to " + this.format, exception);
-            player.sendMessage(McooBuildwithEase.getSystemMessage(
-                    Text.translate("mcoo_build_with_ease.clipboard.download.failed",
-                            exception.getMessage() == null ? "" : exception.getMessage())));
+        var exporter = PlatformLoader.getSingleton(StructureExporter.class);
+        var saved = new java.util.ArrayList<Path>();
+        for (var format : this.formats) {
+            try {
+                saved.add(exporter.export(this.directory, name, this.sizeX, this.sizeY, this.sizeZ, this.blocks, format));
+            } catch (Exception exception) {
+                McooBuildwithEase.LOGGER.error("Failed to export clipboard to " + format, exception);
+                player.sendMessage(McooBuildwithEase.getSystemMessage(
+                        Text.translate("mcoo_build_with_ease.clipboard.download.failed",
+                                exception.getMessage() == null ? "" : exception.getMessage())));
+            }
         }
+        if (saved.isEmpty()) {
+            return;
+        }
+        var paths = saved.stream().map(Path::toString).collect(java.util.stream.Collectors.joining("、"));
+        player.sendMessage(McooBuildwithEase.getSystemMessage(
+                Text.translate("mcoo_build_with_ease.clipboard.download.success", paths)));
+        detach();
     }
 
     /**

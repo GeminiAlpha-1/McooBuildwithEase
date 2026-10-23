@@ -12,10 +12,23 @@ public abstract class AbstractButton extends AbstractWidget {
 
     private final ResourceLocation icon;
 
+    /**
+     * 最近一次点击用的鼠标键（0=左键，1=右键）。
+     * <p>
+     * 只有 {@link #onClick(double, double)} 能拿到点击信息（没有鼠标键参数），
+     * 所以要区分左右键的按钮从这里读。
+     */
+    protected int lastMouseButton = 0;
+
     protected AbstractButton(Entrance entrance, int x, int y, int width, int height, Text message, ResourceLocation icon) {
         super(entrance, x, y, width, height, message);
         this.icon = icon;
         this.focusable = true;
+    }
+
+    /** 最近一次点击用的鼠标键（0=左键，1=右键）。 */
+    public int lastMouseButton() {
+        return this.lastMouseButton;
     }
 
     protected abstract void onPress();
@@ -94,6 +107,7 @@ public abstract class AbstractButton extends AbstractWidget {
         if (super.onMouseClicked(mouseX, mouseY, button) && isActive() && isVisible() && isMouseKeyValid(button)) {
             boolean clickable = isClickable(mouseX, mouseY);
             if (clickable) {
+                this.lastMouseButton = button;
                 playDownSound();
                 onClick(mouseX, mouseY);
                 return true;

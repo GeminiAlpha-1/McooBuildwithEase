@@ -376,6 +376,7 @@ public class MinecraftRenderer extends Renderer {
         guiRenderState.addPicturesInPictureState(new dev.huskuraft.universal.vanilla.renderer.preview.PreviewRenderState(
                 request.blocks(),
                 request.camera(),
+                request.orientation(),
                 x, y, x + width, y + height,
                 scissor,
                 net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState.getBounds(x, y, x + width, y + height, scissor)));

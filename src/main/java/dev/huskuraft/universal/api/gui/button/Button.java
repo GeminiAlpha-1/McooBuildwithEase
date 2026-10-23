@@ -29,6 +29,8 @@ public class Button extends AbstractButton {
     public static final int PADDINGS = 6;
 
     private OnPress onPress;
+    /** 是否也响应右键（默认只响应左键）。 */
+    private boolean rightClickable;
 
     public Button(Entrance entrance, int x, int y, int width, int height, Text message) {
         super(entrance, x, y, width, height, message, null);
@@ -75,6 +77,17 @@ public class Button extends AbstractButton {
         }
     }
 
+    /**
+     * 这个按钮要不要也响应右键。
+     * <p>
+     * 默认只响应左键；开了之后右键也会触发，按钮可以用
+     * {@link AbstractButton#lastMouseButton()} 区分是哪一边点的。
+     */
+    @Override
+    protected boolean isMouseKeyValid(int button) {
+        return button == 0 || (this.rightClickable && button == 1);
+    }
+
     public void setOnPressListener(OnPress onPress) {
         this.onPress = onPress;
     }
@@ -89,6 +102,7 @@ public class Button extends AbstractButton {
         private ResourceLocation icon;
         private final OnPress onPress;
         private final Entrance entrance;
+        private boolean rightClickable;
         @Nullable
         private List<Text> tooltip = new ArrayList<>();
         private int x;
@@ -162,9 +176,16 @@ public class Button extends AbstractButton {
             return this;
         }
 
+        /** 让这个按钮也响应右键（配合 {@link AbstractButton#lastMouseButton()} 区分左右）。 */
+        public Builder setRightClickable() {
+            this.rightClickable = true;
+            return this;
+        }
+
         public Button build() {
             var button = new Button(entrance, this.x, this.y, this.width, this.height, this.text, this.icon, this.onPress);
             button.setTooltip(this.tooltip);
+            button.rightClickable = this.rightClickable;
             return button;
         }
     }

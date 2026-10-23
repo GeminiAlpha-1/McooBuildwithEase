@@ -112,27 +112,19 @@ public class PreviewPictureInPictureRenderer extends PictureInPictureRenderer<Pr
         // 这里**不能再自己缩放**（叠加两次就会撑出视口被裁掉），
         // 只负责在这个坐标系里摆方块：按相机旋转，再把结构中心对到原点。
         var camera = state.camera();
-        var yaw = (float) Math.toRadians(camera.yaw());
-        var pitch = (float) Math.toRadians(camera.pitch());
         // 缩放系数：视口里能看到的模型单位数 = 视口逻辑宽 / state.scale()
         var modelScale = Math.max(0.0001F, state.scale());
 
         // 相机：绕结构中心旋转（偏航绕 Y、俯仰绕 X），再把结构中心对到原点
         poseStack.pushPose();
         // 平移（拖动平移）：平移量按逻辑像素给，换算成模型单位。
-        // Y 轴向上，所以 Y 的平移量取负。
-        poseStack.translate(camera.panX() / modelScale, -camera.panY() / modelScale, 0.0F);
-        // 【旋转】矩阵 = Rx(180° + 俯仰) × Ry(偏航)
-        //
-        //   画中画通道的离屏纹理和常规相机是反的：
-        //   正交投影把视图的 +Y 映到了图像的下方（原版 GUI 再按自己的 v 方向贴回去），
-        //   Z 也被 prepare 里的 scale(s, s, -s) 取了反 —— 相当于相机站在了模型的背后。
-        //   所以这里要把模型绕 X 轴翻 180°（竖直方向和深度一起翻过来）。
-        //
-        //   翻完之后偏航保持不变，得到的是「相机在前方偏左上方」的三分之四视角：
-        //   能看到结构的正面、左面和顶面 —— 也就是建造预览该有的样子。
-        poseStack.mulPose(new org.joml.Quaternionf().rotateXYZ(
-                (float) Math.toRadians(180.0) + pitch, yaw, 0.0F));
+        // 【符号】平移是在**旋转之后**加到视图坐标系里的（矩阵链是 T(平移)·R·T(居中)），
+        // 而视图的 +Y 在最终图像里是向下的 ——
+        // 所以往下拖（panY 变大）就该给视图的 +Y，符号取正。
+        poseStack.translate(camera.panX() / modelScale, camera.panY() / modelScale, 0.0F);
+        // 旋转：绕世界轴的 90° 步进 × (Rx(180°+俯仰) × Ry(偏航))。
+        // 细节见 {@link PreviewRotation}（缩放那边也用同一份矩阵）。
+        poseStack.mulPose(PreviewRotation.of(camera, state.orientation()));
         poseStack.translate((float) -centerX, (float) -centerY, (float) -centerZ);
 
         if (debug) {
