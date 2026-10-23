@@ -479,38 +479,19 @@ public abstract class Renderer {
     /**
      * 在 GUI 里画一个 3D 方块模型预览。
      * <p>
-     * 用途：剪贴板的结构预览。每一块都用**它自己的方块模型**（真实的贴图和面），
-     * 经过相机（偏航 / 俯仰 / 缩放 / 平移）投影成 2D 后画出来 ——
-     * 相邻方块共用同一批角点，所以严丝合缝、没有缝，也不会歪。
+     * 用途：剪贴板的结构预览。
      * <p>
+     * 平台层负责把<b>方块模型</b>和<b>方块实体</b>（钟、箱子、陶罐、旗帜…）一起画出来 ——
+     * 方块实体的形状不在方块状态模型里，只有平台层知道怎么渲染。
      * 默认实现什么都不画（平台不支持 3D 预览时）。
      *
-     * @param mesh   已剔除的网格（见 {@link #buildPreviewMesh}）
-     * @param camera 相机参数
-     * @param x      视口左上角
-     * @param y      视口左上角
-     * @param width  视口宽度
-     * @param height 视口高度
+     * @param request 要渲染的内容（方块 + 相机）
+     * @param x       视口左上角
+     * @param y       视口左上角
+     * @param width   视口宽度
+     * @param height  视口高度
      */
-    public void renderModelPreview(PreviewMesh mesh, PreviewCamera camera, int x, int y, int width, int height) {
-    }
-
-    /**
-     * 构建一个做过剔除的三维预览网格。
-     * <p>
-     * 剔除包含两部分，都与相机无关，因此结果可以缓存：
-     * <ul>
-     *   <li><b>邻接面遮挡</b>：两个相邻方块之间的面看不见（被其中一个挡住）——
-     *       和原版渲染区块时用的是同一套判定（{@code Block.shouldRenderFace}）。
-     *       实心结构里这一项能砍掉约 90% 的面。</li>
-     *   <li><b>整块剔除</b>：被六个不透明方块完全包住的方块，整个都看不见。</li>
-     * </ul>
-     * 默认实现返回一个空网格（平台不支持 3D 预览时）。
-     *
-     * @param blocks 要画的方块
-     */
-    public PreviewMesh buildPreviewMesh(List<PreviewBlock> blocks) {
-        return PreviewMesh.EMPTY;
+    public void renderModelPreview(PreviewRenderRequest request, int x, int y, int width, int height) {
     }
 
     public abstract void renderBlockState(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockState blockState);

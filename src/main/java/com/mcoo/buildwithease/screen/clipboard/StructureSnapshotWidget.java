@@ -11,8 +11,10 @@ import dev.huskuraft.universal.api.text.Text;
 /**
  * 剪贴板的结构预览：一个可以自由观察的 3D 模型。
  * <p>
- * 每一块都用它自己的方块模型（真实贴图）渲染，再按相机参数投影到屏幕上，
- * 相邻方块共用角点，所以没有缝、不会歪。
+ * 这一层只负责「要看什么」和「怎么操作」：把结构里的方块连同方块实体的数据交给平台层，
+ * 再把相机参数（偏航 / 俯仰 / 缩放 / 平移）一起传过去。
+ * 怎么画是平台层的事 —— 平台层用原版的 3D 管线渲染，
+ * 所以方块实体（钟、箱子、陶罐、旗帜…）的形状才是对的。
  * <p>
  * 交互：
  * <ul>
@@ -30,14 +32,13 @@ public final class StructureSnapshotWidget extends AbstractWidget {
 
     private Snapshot snapshot;
     /**
-     * 剔除后的预览网格。
+     * 要预览的方块列表。
      * <p>
-     * 剔除（相邻面遮挡、整块剔除）与相机无关，只取决于结构本身，
-     * 所以网格只在结构变化时重建一次，之后每帧只做投影。
+     * 只在结构变化时重建 —— 每帧重建会白白分配一堆对象。
      */
-    private dev.huskuraft.universal.api.renderer.PreviewMesh mesh;
-    /** 网格对应的结构指纹，用来判断是否需要重建。 */
-    private int meshFingerprint;
+    private java.util.List<PreviewBlock> blocks;
+    /** 方块列表对应的结构指纹，用来判断是否需要重建。 */
+    private int blocksFingerprint;
     /** 相机：偏航角（度）。 */
     private float yaw = 45.0F;
     /** 相机：俯仰角（度）。 */
@@ -65,23 +66,24 @@ public final class StructureSnapshotWidget extends AbstractWidget {
         if (snapshot == null || snapshot.isEmpty()) {
             return;
         }
-        // 网格只在结构变化时重建（剔除结果与相机无关，可以缓存）
+        // 方块列表只在结构变化时重建（每帧重建会白白分配一堆对象）
         var fingerprint = fingerprintOf(snapshot);
-        if (mesh == null || meshFingerprint != fingerprint) {
-            var blocks = snapshot.blockData().stream()
+        if (blocks == null || blocksFingerprint != fingerprint) {
+            blocks = snapshot.blockData().stream()
                     .filter(blockData -> blockData.blockState() != null)
-                    .map(blockData -> new PreviewBlock(blockData.blockPosition(), blockData.blockState()))
+                    .map(blockData -> new PreviewBlock(blockData.blockPosition(), blockData.blockState(), blockData.entityTag()))
                     .toList();
-            mesh = renderer.buildPreviewMesh(blocks);
-            meshFingerprint = fingerprint;
+            blocksFingerprint = fingerprint;
         }
-        if (mesh.isEmpty()) {
+        if (blocks.isEmpty()) {
             return;
         }
 
-        // 裁剪由预览元素自己的 scissorArea() 负责（自己提交的 GUI 元素不吃全局裁剪），
-        // 这里不要再 pushScissor —— 全局裁剪和元素裁剪叠加会把边界算错。
-        renderer.renderModelPreview(mesh, new PreviewCamera(yaw, pitch, zoom, panX, panY),
+        // 平台层用 3D 管线渲染（离屏纹理 → 贴回这个矩形），
+        // 这样方块实体（钟、箱子、陶罐、旗帜…）才能被正确画出来。
+        renderer.renderModelPreview(
+                new dev.huskuraft.universal.api.renderer.PreviewRenderRequest(
+                        blocks, new PreviewCamera(yaw, pitch, zoom, panX, panY)),
                 getLeft(), getTop(), getWidth(), getHeight());
     }
 

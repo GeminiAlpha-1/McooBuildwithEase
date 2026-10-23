@@ -40,6 +40,10 @@ loom {
 			if (project.hasProperty('mcSelfTest')) {
 				vmArgs "-Dmcoo.selfTest=${project.property('mcSelfTest')}"
 			}
+			// 调试用：打印预览渲染链路
+			if (project.hasProperty('mcDebugPreview')) {
+				vmArgs "-Dmcoo.debugPreview=true"
+			}
 		}
 	}
 }

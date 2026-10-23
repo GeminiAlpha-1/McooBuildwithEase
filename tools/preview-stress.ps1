@@ -81,11 +81,11 @@ $shot = Join-Path $out ("stress-$Screen.png")
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'screenshot.ps1') -Out $shot | Out-Null
 Write-Host ("saved " + $shot)
 
-# ---- 剔除统计 ----
+# ---- 预览统计 ----
 $cl = "$ts\logs\ps-client.log"
 if (Test-Path $cl) {
-    Write-Host "--- 剔除统计 ---"
-    Select-String -Path $cl -Pattern '\[preview\]' | Select-Object -Last 3 | ForEach-Object { Write-Host ("  " + $_.Line.Trim()) }
+    Write-Host "--- 预览统计 ---"
+    Select-String -Path $cl -Pattern '\[preview\] rendered' | Select-Object -Last 3 | ForEach-Object { Write-Host ("  " + $_.Line.Trim()) }
     Write-Host "--- 耗时相关 ---"
     Select-String -Path $cl -Pattern '(?i)exception|OutOfMemory' | Select-Object -First 3 | ForEach-Object { Write-Host ("  " + $_.Line.Trim()) }
 }
