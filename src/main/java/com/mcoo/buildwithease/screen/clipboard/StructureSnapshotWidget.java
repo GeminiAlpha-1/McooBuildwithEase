@@ -58,6 +58,12 @@ public final class StructureSnapshotWidget extends AbstractWidget {
             dev.huskuraft.universal.api.renderer.PreviewOrientation.DEFAULT;
     /** 鼠标是否还按着。 */
     private boolean dragging = false;
+    /** 上一帧用的渲染器（导出图片时要用）。 */
+    private dev.huskuraft.universal.api.renderer.Renderer renderer;
+    /** 排队等导出的图片宽（0 = 没有）。 */
+    private int exportWidth;
+    /** 排队等导出的图片高。 */
+    private int exportHeight;
 
     public StructureSnapshotWidget(Entrance entrance, int x, int y, int width, int height, Snapshot snapshot) {
         super(entrance, x, y, width, height, Text.empty());
@@ -70,6 +76,7 @@ public final class StructureSnapshotWidget extends AbstractWidget {
 
     @Override
     public void renderWidget(Renderer renderer, int mouseX, int mouseY, float deltaTick) {
+        this.renderer = renderer;
         if (snapshot == null || snapshot.isEmpty()) {
             return;
         }
@@ -84,6 +91,15 @@ public final class StructureSnapshotWidget extends AbstractWidget {
         }
         if (blocks.isEmpty()) {
             return;
+        }
+
+        // 排队等着的导出：这一帧渲染器和方块列表都齐了，可以导了
+        if (this.exportWidth > 0) {
+            var width = this.exportWidth;
+            var height = this.exportHeight;
+            this.exportWidth = 0;
+            this.exportHeight = 0;
+            exportImage(width, height);
         }
 
         // 平台层用 3D 管线渲染（离屏纹理 → 贴回这个矩形），
@@ -112,6 +128,45 @@ public final class StructureSnapshotWidget extends AbstractWidget {
         this.panX = 0.0F;
         this.panY = 0.0F;
         this.orientation = dev.huskuraft.universal.api.renderer.PreviewOrientation.DEFAULT;
+    }
+
+    /**
+     * 把当前预览导出成图片（透明背景的 PNG）。
+     * <p>
+     * 存到游戏目录的 {@code mcoo_build_with_ease_exports/} 里，文件名带时间和分辨率。
+     *
+     * @param width  图片宽（像素）
+     * @param height 图片高（像素）
+     */
+    public void exportImage(int width, int height) {
+        if (this.renderer == null || this.blocks == null || this.blocks.isEmpty()) {
+            return;
+        }
+        var directory = dev.huskuraft.universal.api.platform.Platform.getInstance()
+                .getGameDir().resolve("mcoo_build_with_ease_exports");
+        var name = "preview_" + java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                + "_" + width + "x" + height + ".png";
+        this.renderer.exportModelPreview(
+                new dev.huskuraft.universal.api.renderer.PreviewRenderRequest(
+                        this.blocks, new PreviewCamera(yaw, pitch, zoom, panX, panY), this.orientation),
+                width, height, directory.resolve(name));
+        getEntrance().getClient().getPlayer().sendMessage(com.mcoo.buildwithease.McooBuildwithEase.getSystemMessage(
+                dev.huskuraft.universal.api.text.Text.translate(
+                        "mcoo_build_with_ease.clipboard.export_image.started", width + "×" + height)));
+    }
+
+    /**
+     * 排队一次导出（在下一帧渲染时执行）。
+     * <p>
+     * 导出要用到渲染器，而渲染器是渲染的时候才拿到的 —— 所以不能当场导。
+     *
+     * @param width  图片宽（像素）
+     * @param height 图片高（像素）
+     */
+    public void requestExport(int width, int height) {
+        this.exportWidth = width;
+        this.exportHeight = height;
     }
 
     /**

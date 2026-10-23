@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import com.google.auto.service.AutoService;
 
+import dev.huskuraft.universal.api.core.Block;
 import dev.huskuraft.universal.api.core.Item;
 import dev.huskuraft.universal.api.core.ItemStack;
 import dev.huskuraft.universal.api.core.ResourceLocation;
@@ -46,6 +47,12 @@ public class MinecraftContentFactory implements ContentFactory {
     @Override
     public Optional<Item> newOptionalItem(ResourceLocation location) {
         return BuiltInRegistries.ITEM.getOptional(location.<net.minecraft.resources.Identifier>reference()).map(MinecraftItem::ofNullable);
+    }
+
+    @Override
+    public Optional<Block> newOptionalBlock(ResourceLocation location) {
+        return BuiltInRegistries.BLOCK.getOptional(location.<net.minecraft.resources.Identifier>reference())
+                .map(block -> new dev.huskuraft.universal.vanilla.core.MinecraftBlock(block));
     }
 
     @Override

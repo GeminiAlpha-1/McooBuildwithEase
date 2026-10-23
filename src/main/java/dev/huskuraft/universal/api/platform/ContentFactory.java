@@ -3,6 +3,7 @@ package dev.huskuraft.universal.api.platform;
 import java.util.Locale;
 import java.util.Optional;
 
+import dev.huskuraft.universal.api.core.Block;
 import dev.huskuraft.universal.api.core.Item;
 import dev.huskuraft.universal.api.core.ItemStack;
 import dev.huskuraft.universal.api.core.Items;
@@ -29,6 +30,18 @@ public interface ContentFactory {
 
     default Item newItem(ResourceLocation location) {
         return newOptionalItem(location).orElseThrow();
+    }
+
+    /**
+     * 按注册表名字找方块。
+     * <p>
+     * 有些方块没有对应的物品（水、岩浆就是这样），
+     * 想拿到它们的状态只能走方块注册表。
+     */
+    Optional<Block> newOptionalBlock(ResourceLocation location);
+
+    default Block newBlock(ResourceLocation location) {
+        return newOptionalBlock(location).orElseThrow();
     }
 
     ItemStack newItemStack();

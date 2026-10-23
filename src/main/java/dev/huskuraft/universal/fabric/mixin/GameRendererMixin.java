@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import dev.huskuraft.universal.vanilla.renderer.preview.PreviewExportRenderer;
 import dev.huskuraft.universal.vanilla.renderer.preview.PreviewPictureInPictureRenderer;
 import dev.huskuraft.universal.vanilla.renderer.preview.PreviewRenderState;
 import net.minecraft.client.Minecraft;
@@ -38,6 +39,11 @@ public abstract class GameRendererMixin {
         try {
             var list = new ArrayList<>(original);
             list.add(new PreviewPictureInPictureRenderer(Minecraft.getInstance()));
+            // 「导出图片」也要占一个画中画渲染器：3D 内容必须在 GUI 渲染通道**里面**画，
+            // 借它的时机把输出切到自己那张可回读的纹理上。
+            var exportRenderer = new PreviewExportRenderer(Minecraft.getInstance());
+            PreviewExportRenderer.register(exportRenderer);
+            list.add(exportRenderer);
             return list;
         } catch (Throwable throwable) {
             // 拿不到就退回原版列表（预览不显示，但不影响其它功能）

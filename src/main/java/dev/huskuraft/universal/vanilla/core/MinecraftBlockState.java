@@ -98,6 +98,20 @@ public record MinecraftBlockState(net.minecraft.world.level.block.state.BlockSta
     }
 
     @Override
+    public BlockState withProperty(Property property, PropertyValue value) {
+        return ofNullable(setProperty(refs, property.reference(), value.reference()));
+    }
+
+    /** 原版的属性是带泛型的，这里统一按原始类型处理。 */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static net.minecraft.world.level.block.state.BlockState setProperty(
+            net.minecraft.world.level.block.state.BlockState state,
+            net.minecraft.world.level.block.state.properties.Property property,
+            Comparable<?> value) {
+        return state.setValue(property, (Comparable) value);
+    }
+
+    @Override
     public boolean isAir() {
         return refs.isAir();
     }

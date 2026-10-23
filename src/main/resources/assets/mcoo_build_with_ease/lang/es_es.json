@@ -561,6 +561,12 @@
   "mcoo_build_with_ease.clipboard.download.failed": "Export failed: %s",
   "mcoo_build_with_ease.clipboard.download.empty": "The clipboard is empty",
   "mcoo_build_with_ease.clipboard.download.to_downloads": "Guardar en la carpeta Descargas del equipo",
+  "mcoo_build_with_ease.clipboard.export_image": "Exportar imagen",
+  "mcoo_build_with_ease.clipboard.export_image.title": "Exportar imagen de vista previa",
+  "mcoo_build_with_ease.clipboard.export_image.1k": "1K (1024)",
+  "mcoo_build_with_ease.clipboard.export_image.2k": "2K (2048)",
+  "mcoo_build_with_ease.clipboard.export_image.4k": "4K (4096)",
+  "mcoo_build_with_ease.clipboard.export_image.started": "Exportando imagen de vista previa (%s)...",
   "mcoo_build_with_ease.button.new_folder": "New folder",
   "mcoo_build_with_ease.button.parent_folder": "..",
   "mcoo_build_with_ease.clipboard.download.save_title": "Save structure",
@@ -570,7 +576,5 @@
   "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "Girar 90° alrededor del eje %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "Girar 90° alrededor del eje %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "Girar 90° alrededor del eje %s",
-  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Restablecer vista",
-  "m": "c",
-  "C": "r"
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Restablecer vista"
 }

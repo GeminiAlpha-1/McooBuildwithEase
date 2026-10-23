@@ -49,7 +49,14 @@ final class McooBuildwithEaseDebug {
                 if (builder.getContext(player).clipboard().isEmpty()) {
                     return;
                 }
-                new McooBuildwithEaseClipboardScreen(entrance).attach();
+                var clipboardScreen = new McooBuildwithEaseClipboardScreen(entrance);
+                clipboardScreen.attach();
+                // 「导出图片」场景：等预览先渲染几帧（渲染器这时才拿到），再自动导一次
+                if ("clipboard-export".equals(screen)) {
+                    clipboardScreen.getSnapshotWidget().requestExport(1024, 683);
+                } else if ("clipboard-export4k".equals(screen)) {
+                    clipboardScreen.getSnapshotWidget().requestExport(4096, 2731);
+                }
                 opened = true;
                 return;
             }
@@ -201,6 +208,58 @@ final class McooBuildwithEaseDebug {
                 }
                 return clipboard("debug-partial", blocks);
             }
+            case "clipboard-water" -> {
+                // 含水方块专项测试：水不是方块模型的一部分（原版由流体渲染器单独画），
+                // 所以水方块本身在预览里是「空的」，含水的树叶/楼梯则是「方块模型 + 水」两层。
+                var builder = entrance.getStructureBuilder();
+                var player = entrance.getClient().getPlayer();
+                var factory = dev.huskuraft.universal.api.platform.ContentFactory.getInstance();
+                var water = factory.newOptionalBlock(dev.huskuraft.universal.api.core.ResourceLocation.vanilla("water"))
+                        .map(block -> block.getDefaultBlockState()).orElse(null);
+                var lava = factory.newOptionalBlock(dev.huskuraft.universal.api.core.ResourceLocation.vanilla("lava"))
+                        .map(block -> block.getDefaultBlockState()).orElse(null);
+                var wetLeaves = withWaterlogged(
+                        dev.huskuraft.universal.api.core.Items.OAK_LEAVES.item().getBlock().getDefaultBlockState());
+                var wetStairs = withWaterlogged(
+                        dev.huskuraft.universal.api.core.Items.OAK_STAIRS.item().getBlock().getDefaultBlockState());
+                var column = 0;
+                if (water != null) {
+                    blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                            new dev.huskuraft.universal.api.core.BlockPosition(column++, 0, 0), water, null));
+                }
+                if (lava != null) {
+                    blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                            new dev.huskuraft.universal.api.core.BlockPosition(column++, 0, 0), lava, null));
+                }
+                blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                        new dev.huskuraft.universal.api.core.BlockPosition(column++, 0, 0), wetLeaves, null));
+                blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                        new dev.huskuraft.universal.api.core.BlockPosition(column, 0, 0), wetStairs, null));
+                return clipboard("debug-water", blocks);
+            }
+            case "clipboard-export", "clipboard-export4k" -> {
+                // 导出图片专项测试：铺一片方块，界面打开后自动导一张透明 PNG。
+                // clipboard-export4k 用来测 4K 大图（顺带测「物理尺寸 ≠ 请求尺寸」的裁切路径）。
+                var exportKinds = new dev.huskuraft.universal.api.core.Item[]{
+                        dev.huskuraft.universal.api.core.Items.OAK_PLANKS.item(),
+                        dev.huskuraft.universal.api.core.Items.BRICKS.item(),
+                        dev.huskuraft.universal.api.core.Items.STONE_BRICKS.item(),
+                        dev.huskuraft.universal.api.core.Items.GLASS.item(),
+                        dev.huskuraft.universal.api.core.Items.SAND.item(),
+                        dev.huskuraft.universal.api.core.Items.OAK_LOG.item()
+                };
+                for (int x = 0; x < 4; x++) {
+                    for (int y = 0; y < 3; y++) {
+                        for (int z = 0; z < 4; z++) {
+                            blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                    new dev.huskuraft.universal.api.core.BlockPosition(x, y, z),
+                                    exportKinds[(x * 3 + y * 2 + z) % exportKinds.length].getBlock().getDefaultBlockState(),
+                                    null));
+                        }
+                    }
+                }
+                return clipboard("debug-export", blocks);
+            }
             case "clipboard-big" -> {
                 // 大结构压力测试：实心 32x32x32 = 32768 块。
                 // 用来验证大结构下预览还能不能流畅拖动。
@@ -227,6 +286,19 @@ final class McooBuildwithEaseDebug {
             String name, java.util.List<com.mcoo.buildwithease.building.clipboard.BlockData> blocks) {
         return new com.mcoo.buildwithease.building.clipboard.Clipboard(
                 true, new com.mcoo.buildwithease.building.clipboard.Snapshot(name, 0, blocks));
+    }
+
+    /** 把方块状态改成「含水」。 */
+    private static dev.huskuraft.universal.api.core.BlockState withWaterlogged(
+            dev.huskuraft.universal.api.core.BlockState state) {
+        var property = state.getPropertiesMap().keySet().stream()
+                .filter(p -> "waterlogged".equals(p.getName()))
+                .findFirst().orElse(null);
+        if (property == null) {
+            return state;
+        }
+        var value = property.getValue("true").orElse(null);
+        return value == null ? state : state.withProperty(property, value);
     }
 
 }

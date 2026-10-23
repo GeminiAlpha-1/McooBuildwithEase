@@ -561,6 +561,12 @@
   "mcoo_build_with_ease.clipboard.download.failed": "Export failed: %s",
   "mcoo_build_with_ease.clipboard.download.empty": "The clipboard is empty",
   "mcoo_build_with_ease.clipboard.download.to_downloads": "Сохранить в папку Загрузки",
+  "mcoo_build_with_ease.clipboard.export_image": "Экспорт картинки",
+  "mcoo_build_with_ease.clipboard.export_image.title": "Экспорт картинки предпросмотра",
+  "mcoo_build_with_ease.clipboard.export_image.1k": "1K (1024)",
+  "mcoo_build_with_ease.clipboard.export_image.2k": "2K (2048)",
+  "mcoo_build_with_ease.clipboard.export_image.4k": "4K (4096)",
+  "mcoo_build_with_ease.clipboard.export_image.started": "Экспорт картинки предпросмотра (%s)...",
   "mcoo_build_with_ease.button.new_folder": "New folder",
   "mcoo_build_with_ease.button.parent_folder": "..",
   "mcoo_build_with_ease.clipboard.download.save_title": "Save structure",
@@ -570,7 +576,5 @@
   "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "Поворот на 90° вокруг оси %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "Поворот на 90° вокруг оси %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "Поворот на 90° вокруг оси %s",
-  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Сбросить вид",
-  "m": "c",
-  "C": "r"
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Сбросить вид"
 }

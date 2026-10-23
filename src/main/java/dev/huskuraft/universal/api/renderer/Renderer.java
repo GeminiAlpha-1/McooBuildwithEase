@@ -494,6 +494,20 @@ public abstract class Renderer {
     public void renderModelPreview(PreviewRenderRequest request, int x, int y, int width, int height) {
     }
 
+    /**
+     * 把预览导出成图片（透明背景的 PNG）。
+     * <p>
+     * 平台层负责把画面渲染到一张离屏纹理上，再回读成图片存盘 ——
+     * 背景是透明的，和预览里看到的完全一致。
+     *
+     * @param request 要渲染的内容
+     * @param width   图片宽（像素）
+     * @param height  图片高（像素）
+     * @param file    保存位置（PNG）
+     */
+    public void exportModelPreview(PreviewRenderRequest request, int width, int height, java.nio.file.Path file) {
+    }
+
     public abstract void renderBlockState(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockState blockState);
 
     public abstract void renderBlockEntity(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockEntity blockEntity);

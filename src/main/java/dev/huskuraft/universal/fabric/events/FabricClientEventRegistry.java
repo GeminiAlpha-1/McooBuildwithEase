@@ -37,6 +37,11 @@ public class FabricClientEventRegistry extends ClientEventRegistry {
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             getClientTickEvent().invoker().onClientTick(new MinecraftClient(minecraft), ClientTick.Phase.END);
+            // 「导出图片」的回读要提交命令编码器，必须在帧外做（帧内提交会让 Vulkan 掉设备）。
+            var exportRenderer = dev.huskuraft.universal.vanilla.renderer.preview.PreviewExportRenderer.get();
+            if (exportRenderer != null) {
+                exportRenderer.readBackIfReady();
+            }
             // 26.2 的 Fabric API 没有全局按键事件（只有屏幕内的 ScreenKeyboardEvents），
             // 而上游对按键的用法全是 KeyMapping.isDown() / consumeClick() 这种轮询语义，
             // 所以改成在 tick 末尾派发一次按键事件即可，不必再 mixin KeyboardHandler。

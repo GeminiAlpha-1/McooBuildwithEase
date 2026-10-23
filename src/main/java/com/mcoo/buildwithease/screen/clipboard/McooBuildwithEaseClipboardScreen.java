@@ -45,6 +45,11 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
         return (McooBuildwithEaseClient) super.getEntrance();
     }
 
+    /** 预览控件（导出图片、视角面板都要用到它）。 */
+    public StructureSnapshotWidget getSnapshotWidget() {
+        return this.snapshotWidget;
+    }
+
     protected Player getPlayer() {
         return getEntrance().getClient().getPlayer();
     }
@@ -120,12 +125,16 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
 
         this.doneButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.done"), button -> {
             detachAll();
-        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 0f, 2 / 4f).build());
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 0f, 1 / 3f).build());
+
+        addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.clipboard.export_image"), button -> {
+            new McooBuildwithEaseExportImageScreen(getEntrance(), this.snapshotWidget).attach();
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 1 / 3f, 1 / 3f).build());
 
         this.enableButton = addWidget(Button.builder(getEntrance(), clipboard.enabled() ? Text.translate("mcoo_build_with_ease.clipboard.button.disable") : Text.translate("mcoo_build_with_ease.clipboard.button.enable"), button -> {
             this.clipboard = clipboard.withEnabled(!clipboard.enabled());
             recreate();
-        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 2 / 4f, 2 / 4f).build());
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 2 / 3f, 1 / 3f).build());
 
 
     }

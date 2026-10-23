@@ -372,6 +372,11 @@ public class MinecraftRenderer extends Renderer {
         // 这样方块实体（钟、箱子、陶罐、旗帜…）才能被正确渲染 ——
         // 它们的形状不在方块状态模型里，只有 3D 管线里的方块实体渲染器知道怎么画。
         var guiRenderState = minecraftClient.gameRenderer.gameRenderState().guiRenderState;
+        // 导出图片：每帧推进一次（提交离屏状态 / 回读上一帧的结果）
+        var exportRenderer = dev.huskuraft.universal.vanilla.renderer.preview.PreviewExportRenderer.get();
+        if (exportRenderer != null) {
+            exportRenderer.submit(guiRenderState);
+        }
         var scissor = new net.minecraft.client.gui.navigation.ScreenRectangle(x, y, width, height);
         guiRenderState.addPicturesInPictureState(new dev.huskuraft.universal.vanilla.renderer.preview.PreviewRenderState(
                 request.blocks(),
@@ -380,6 +385,15 @@ public class MinecraftRenderer extends Renderer {
                 x, y, x + width, y + height,
                 scissor,
                 net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState.getBounds(x, y, x + width, y + height, scissor)));
+    }
+
+    @Override
+    public void exportModelPreview(PreviewRenderRequest request, int width, int height, java.nio.file.Path file) {
+        var renderer = dev.huskuraft.universal.vanilla.renderer.preview.PreviewExportRenderer.get();
+        if (renderer == null) {
+            return;
+        }
+        renderer.request(request.blocks(), request.camera(), request.orientation(), width, height, file);
     }
 
     @Override
