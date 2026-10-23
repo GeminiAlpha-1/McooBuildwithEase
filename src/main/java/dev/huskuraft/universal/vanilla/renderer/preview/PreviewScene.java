@@ -160,7 +160,7 @@ public final class PreviewScene {
             if (!modelState.isEmpty()) {
                 // overlay 必须是原版的 NO_OVERLAY（u | v<<16）——传 -1 会采到 overlay 贴图的错误格子，
                 // 方块模型会整个变黑。
-                modelState.submit(poseStack, collector, 0xF000F0,
+                modelState.submit(poseStack, collector, lightCoords(blockModelState),
                         net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
                 modelCount++;
             }
@@ -183,6 +183,32 @@ public final class PreviewScene {
             System.out.println("[preview] rendered models=" + modelCount + " entities=" + entityCount
                     + " cached=" + modelCache.size() + " cost=" + String.format("%.1f", millis) + "ms");
         }
+    }
+
+    /**
+     * 环境光等级（当成白天的天光）。
+     * <p>
+     * 预览里没有世界，方块拿不到真实的光照 —— 之前一律用 0xF000F0（天光、块光全满），
+     * 结果所有方块亮度一样，画面很平。
+     */
+    private static final int AMBIENT_LIGHT = 15;
+
+    /**
+     * 按方块自己的发光等级算光照坐标。
+     * <p>
+     * 原版里萤石、海晶灯这类方块「自带光」，靠的是它们所在位置的光照等级（lightmap），
+     * 并没有单独的渲染层。预览里没有世界可查，就按方块自己的发光等级来给：
+     * 普通方块只有环境光，发光方块额外带上它自己的发光等级 —— 这样它们会明显更亮、更暖。
+     *
+     * @param state 方块状态
+     * @return 光照坐标（blockLight 高位、skyLight 低位）
+     */
+    private static int lightCoords(BlockState state) {
+        var emission = state.getLightEmission();
+        if (emission <= 0) {
+            return AMBIENT_LIGHT << 4;
+        }
+        return (emission << 20) | (AMBIENT_LIGHT << 4);
     }
 
     /**
@@ -240,7 +266,7 @@ public final class PreviewScene {
             var renderType = net.minecraft.client.renderer.rendertype.RenderTypes.translucentMovingBlock();
             collector.submitCustomGeometry(poseStack, renderType, (pose, consumer) -> {
                 var instance = new com.mojang.blaze3d.vertex.QuadInstance();
-                instance.setLightCoords(0xF000F0);
+                instance.setLightCoords(lightCoords(blockState));
                 instance.setOverlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY);
                 // 水的颜色（原版取的是 biome 的水色，主世界就是这个蓝）；岩浆用自己的贴图颜色，不染色
                 var tint = fluidState.getType() == net.minecraft.world.level.material.Fluids.WATER

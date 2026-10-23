@@ -267,6 +267,32 @@ final class McooBuildwithEaseDebug {
                 }
                 return clipboard("debug-export", blocks);
             }
+            case "clipboard-light" -> {
+                // 发光方块专项测试：萤石、海晶灯、灯笼、荧石灯这些「自带光」的方块，
+                // 预览里应该明显比普通方块亮（之前一律用满亮度，画面很平）。
+                var kinds = new dev.huskuraft.universal.api.core.Item[]{
+                        dev.huskuraft.universal.api.core.Items.GLOWSTONE.item(),
+                        dev.huskuraft.universal.api.core.Items.SEA_LANTERN.item(),
+                        dev.huskuraft.universal.api.core.Items.SHROOMLIGHT.item(),
+                        dev.huskuraft.universal.api.core.Items.LANTERN.item(),
+                        dev.huskuraft.universal.api.core.Items.REDSTONE_LAMP.item(),
+                        dev.huskuraft.universal.api.core.Items.BEACON.item(),
+                        dev.huskuraft.universal.api.core.Items.STONE.item(),
+                        dev.huskuraft.universal.api.core.Items.OAK_PLANKS.item(),
+                        dev.huskuraft.universal.api.core.Items.GLASS.item()
+                };
+                for (int x = 0; x < 3; x++) {
+                    for (int y = 0; y < 2; y++) {
+                        for (int z = 0; z < 3; z++) {
+                            blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                    new dev.huskuraft.universal.api.core.BlockPosition(x, y, z),
+                                    kinds[(x * 3 + y * 2 + z) % kinds.length].getBlock().getDefaultBlockState(),
+                                    null));
+                        }
+                    }
+                }
+                return clipboard("debug-light", blocks);
+            }
             case "clipboard-big" -> {
                 // 大结构压力测试：实心 32x32x32 = 32768 块。
                 // 用来验证大结构下预览还能不能流畅拖动。
