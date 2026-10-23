@@ -122,11 +122,17 @@ public class PreviewPictureInPictureRenderer extends PictureInPictureRenderer<Pr
         // 平移（拖动平移）：平移量按逻辑像素给，换算成模型单位。
         // Y 轴向上，所以 Y 的平移量取负。
         poseStack.translate(camera.panX() / modelScale, -camera.panY() / modelScale, 0.0F);
-        // 【旋转顺序】这里是 Rx(俯仰) × Ry(偏航)：
-        // 偏航绕的是世界的竖直轴，俯仰绕的是偏航之后的水平轴 ——
-        // 所以世界的竖直方向在屏幕上永远是直的（等距视角），不会跟着偏航歪掉。
-        // 注意别用 rotateYXZ：那个是 Ry × Rx，等于把相机挪到了结构的另一侧（画面会镜像）。
-        poseStack.mulPose(new org.joml.Quaternionf().rotateXYZ(pitch, yaw, 0.0F));
+        // 【旋转】矩阵 = Rx(180° + 俯仰) × Ry(偏航)
+        //
+        //   画中画通道的离屏纹理和常规相机是反的：
+        //   正交投影把视图的 +Y 映到了图像的下方（原版 GUI 再按自己的 v 方向贴回去），
+        //   Z 也被 prepare 里的 scale(s, s, -s) 取了反 —— 相当于相机站在了模型的背后。
+        //   所以这里要把模型绕 X 轴翻 180°（竖直方向和深度一起翻过来）。
+        //
+        //   翻完之后偏航保持不变，得到的是「相机在前方偏左上方」的三分之四视角：
+        //   能看到结构的正面、左面和顶面 —— 也就是建造预览该有的样子。
+        poseStack.mulPose(new org.joml.Quaternionf().rotateXYZ(
+                (float) Math.toRadians(180.0) + pitch, yaw, 0.0F));
         poseStack.translate((float) -centerX, (float) -centerY, (float) -centerZ);
 
         if (debug) {
@@ -141,7 +147,10 @@ public class PreviewPictureInPictureRenderer extends PictureInPictureRenderer<Pr
 
         var resolver = new BlockModelResolver(minecraft.getModelManager());
         var dispatcher = minecraft.getBlockEntityRenderDispatcher();
-        var crumbling = new ModelFeatureRenderer.CrumblingOverlay(0, poseStack.last());
+        // 破坏进度覆盖层必须是 null —— 原版只在方块真的在被破坏时才传它。
+        // 传一个进度为 0 的覆盖层等于告诉渲染器「这个方块正在碎裂」，
+        // 结果钟、箱子、旗帜这些方块实体上会浮出方块破坏时的裂纹。
+        ModelFeatureRenderer.CrumblingOverlay crumbling = null;
         int modelCount = 0;
         int entityCount = 0;
 

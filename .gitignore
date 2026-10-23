@@ -22,6 +22,7 @@ _shots/
 
 # 给 AI / 协作者看的工程约束文档（本地留着用，不进仓库）
 AGENTS.md
+TEST-CHECKLIST.md
 
 # 操作系统
 .DS_Store

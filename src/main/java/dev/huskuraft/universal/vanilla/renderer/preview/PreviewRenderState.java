@@ -79,9 +79,9 @@ public record PreviewRenderState(
 
         // 旋转后的投影范围（以结构中心为原点 —— 和 renderToTexture 里的变换一致）
         //
-        // 【旋转顺序】渲染时用的是 Quaternionf.rotateXYZ(pitch, yaw, 0)，
-        // 也就是 Rx(俯仰) × Ry(偏航)：作用到向量上是「先绕 Y（偏航）再绕 X（俯仰）」。
-        // 这里必须用同样的顺序，否则算出来的投影范围是错的（缩放会偏小/偏大）。
+        // 【旋转顺序】渲染时用的是 Quaternionf.rotateXYZ(180° + 俯仰, 偏航, 0)，
+        // 也就是 Rx(180° + pitch) × Ry(偏航)：作用到向量上是「先绕 Y（偏航）再绕 X」。
+        // 这里必须用同样的顺序和同样的角度，否则算出来的投影范围是错的（缩放会偏小/偏大）。
         var yaw = (float) Math.toRadians(camera.yaw());
         var pitch = (float) Math.toRadians(camera.pitch());
         var cosY = (float) Math.cos(yaw);
@@ -100,8 +100,9 @@ public record PreviewRenderState(
                 // 绕 Y 轴（偏航）—— 先
                 double rx = wx * cosY + wz * sinY;
                 double rz = -wx * sinY + wz * cosY;
-                // 绕 X 轴（俯仰）—— 后
-                double ry = wy * cosX - rz * sinX;
+                // 绕 X 轴（180° + 俯仰）—— 后
+                //   cos(180°+p) = -cos p，sin(180°+p) = -sin p
+                double ry = -wy * cosX + rz * sinX;
                 minPX = Math.min(minPX, (float) rx);
                 maxPX = Math.max(maxPX, (float) rx);
                 minPY = Math.min(minPY, (float) ry);
