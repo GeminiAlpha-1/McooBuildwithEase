@@ -67,6 +67,86 @@ final class McooBuildwithEaseDebug {
                             true, new com.mcoo.buildwithease.building.clipboard.Snapshot("debug", 0, blocks)));
                     new McooBuildwithEaseClipboardScreen(entrance).attach();
                 }
+                case "clipboard-fence" -> {
+                    // 栅栏专项测试：一排栅栏 + 楼梯。
+                    // 栅栏是典型的多部件方块（立柱 + 横杆），每个部件的 cullface 声明不同，
+                    // 剔除逻辑一旦用错就会只剩顶面。
+                    var builder = entrance.getStructureBuilder();
+                    var player = entrance.getClient().getPlayer();
+                    var blocks = new java.util.ArrayList<com.mcoo.buildwithease.building.clipboard.BlockData>();
+                    var fence = dev.huskuraft.universal.api.core.Items.OAK_FENCE.item().getBlock().getDefaultBlockState();
+                    var stairs = dev.huskuraft.universal.api.core.Items.OAK_STAIRS.item().getBlock().getDefaultBlockState();
+                    for (int x = 0; x < 4; x++) {
+                        for (int z = 0; z < 4; z++) {
+                            // 相邻的栅栏/楼梯 —— 这样才会触发邻接剔除，
+                            // 才能验证「相邻时侧面还在不在」。
+                            blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                    new dev.huskuraft.universal.api.core.BlockPosition(x, 0, z),
+                                    (x + z) % 2 == 0 ? fence : stairs, null));
+                        }
+                    }
+                    // 再叠一层，测试竖直方向相邻
+                    for (int x = 0; x < 4; x++) {
+                        for (int z = 0; z < 4; z++) {
+                            blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                    new dev.huskuraft.universal.api.core.BlockPosition(x, 1, z),
+                                    fence, null));
+                        }
+                    }
+                    builder.setClipboard(player, new com.mcoo.buildwithease.building.clipboard.Clipboard(
+                            true, new com.mcoo.buildwithease.building.clipboard.Snapshot("debug-fence", 0, blocks)));
+                    new McooBuildwithEaseClipboardScreen(entrance).attach();
+                }
+                case "clipboard-snow" -> {
+                    // 雪片专项测试：石头地板 (y=0) + 上面一层雪片 (y=1)。
+                    // 雪片是薄层（1/8 高），上下/侧面的遮挡形状完全不对称 ——
+                    // 邻接剔除如果用错方向，雪片的顶面会被误剔，地板上就出现一个个洞。
+                    var builder = entrance.getStructureBuilder();
+                    var player = entrance.getClient().getPlayer();
+                    var blocks = new java.util.ArrayList<com.mcoo.buildwithease.building.clipboard.BlockData>();
+                    var stone = dev.huskuraft.universal.api.core.Items.STONE.item().getBlock().getDefaultBlockState();
+                    var snow = dev.huskuraft.universal.api.core.Items.SNOW.item().getBlock().getDefaultBlockState();
+                    for (int x = 0; x < 5; x++) {
+                        for (int z = 0; z < 5; z++) {
+                            blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                    new dev.huskuraft.universal.api.core.BlockPosition(x, 0, z), stone, null));
+                            blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                    new dev.huskuraft.universal.api.core.BlockPosition(x, 1, z), snow, null));
+                        }
+                    }
+                    builder.setClipboard(player, new com.mcoo.buildwithease.building.clipboard.Clipboard(
+                            true, new com.mcoo.buildwithease.building.clipboard.Snapshot("debug-snow", 0, blocks)));
+                    new McooBuildwithEaseClipboardScreen(entrance).attach();
+                }
+                case "clipboard-partial" -> {
+                    // 不完整方块专项测试：雪片（薄层）、雪块、台阶、半砖、栅栏。
+                    // 这些方块的遮挡形状上下/侧面完全不对称 —— 邻接剔除如果用错方向，
+                    // 会把玩家看得见的面剔掉（表现为结构上出现一个个「洞」）。
+                    var builder = entrance.getStructureBuilder();
+                    var player = entrance.getClient().getPlayer();
+                    var blocks = new java.util.ArrayList<com.mcoo.buildwithease.building.clipboard.BlockData>();
+                    var kinds = new dev.huskuraft.universal.api.core.Item[]{
+                            dev.huskuraft.universal.api.core.Items.SNOW.item(),
+                            dev.huskuraft.universal.api.core.Items.SNOW_BLOCK.item(),
+                            dev.huskuraft.universal.api.core.Items.OAK_STAIRS.item(),
+                            dev.huskuraft.universal.api.core.Items.STONE_SLAB.item(),
+                            dev.huskuraft.universal.api.core.Items.OAK_FENCE.item(),
+                            dev.huskuraft.universal.api.core.Items.SAND.item()
+                    };
+                    for (int x = 0; x < 3; x++) {
+                        for (int y = 0; y < 3; y++) {
+                            for (int z = 0; z < 3; z++) {
+                                blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                        new dev.huskuraft.universal.api.core.BlockPosition(x, y, z),
+                                        kinds[(x * 3 + y * 2 + z) % kinds.length].getBlock().getDefaultBlockState(),
+                                        null));
+                            }
+                        }
+                    }
+                    builder.setClipboard(player, new com.mcoo.buildwithease.building.clipboard.Clipboard(
+                            true, new com.mcoo.buildwithease.building.clipboard.Snapshot("debug-partial", 0, blocks)));
+                    new McooBuildwithEaseClipboardScreen(entrance).attach();
+                }
                 case "clipboard-big" -> {
                     // 大结构压力测试：实心 32x32x32 = 32768 块。
                     // 实心结构的内部面全被相邻方块挡住，邻接剔除后只剩表面 6144 个面。

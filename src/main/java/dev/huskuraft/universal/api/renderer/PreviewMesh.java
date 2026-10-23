@@ -38,18 +38,15 @@ public record PreviewMesh(
      * 预览网格里的一个面。
      *
      * @param positions 4 个顶点的局部坐标（相对方块原点的 0~1）
-     * @param uvs       4 个顶点的贴图内坐标（0~1）
-     * @param u0,v0,u1,v1 这个面用的贴图在方块图集里的范围
+     * @param uvs       4 个顶点的贴图坐标 —— <b>方块图集里的绝对 UV</b>
+     *                  （MC 烘焙时存的就是 {@code UVPair.pack(sprite.getU(u), sprite.getV(v))}，
+     *                  已经是图集坐标，不能再乘一次 sprite 矩形）
      * @param tint      顶点色（含逐面明暗）
      * @param nx,ny,nz 面的法线（未旋转，世界轴向）
      */
     public record PreviewFace(
             float[] positions,
             float[] uvs,
-            float u0,
-            float v0,
-            float u1,
-            float v1,
             int tint,
             float nx,
             float ny,

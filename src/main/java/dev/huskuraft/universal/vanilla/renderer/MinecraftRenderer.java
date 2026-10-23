@@ -354,11 +354,15 @@ public class MinecraftRenderer extends Renderer {
     /**
      * 方块模型细分出来的一个面（贴图 + 顶点）。
      * <p>
-     * 位置是方块局部坐标（0~1），UV 是贴图内坐标（0~1），
-     * 图集矩形是这个面用的贴图在方块图集里的范围。
+     * 位置是方块局部坐标（0~1）；UV 是<b>方块图集里的绝对坐标</b>
+     * （MC 烘焙时就是这么存的，见 {@code FaceBakery#bakeVertex}）。
+     *
+     * @param cullDirection 这个面所属的 <b>cullface 分组方向</b>；
+     *                      {@code null} 表示它属于 unculled 组（模型没声明 cullface），
+     *                      原版对这一组<b>不做邻接剔除</b>，无条件渲染。
      */
-    private record ModelFace(float[] positions, float[] uvs, float u0, float v0, float u1, float v1,
-                             int tint, float nx, float ny, float nz) {
+    private record ModelFace(float[] positions, float[] uvs, int tint, float nx, float ny, float nz,
+                             net.minecraft.core.Direction cullDirection) {
     }
 
     /** 方块状态 → 它的模型面（跨帧缓存，资源重载后清空）。 */
@@ -420,17 +424,24 @@ public class MinecraftRenderer extends Renderer {
                 // 【邻接面剔除】和原版渲染区块时是同一套判定：
                 // 某个方向上相邻的方块若把这个面完全挡住，这个面就不画。
                 // 实心结构里这一项能砍掉约 90% 的面（内部面根本看不见）。
-                var direction = directionOf(face.nx(), face.ny(), face.nz());
-                if (direction == null) {
-                    continue;
-                }
-                var neighbor = lookup.get(packPosition(
-                        block.position().x() + direction.getStepX(),
-                        block.position().y() + direction.getStepY(),
-                        block.position().z() + direction.getStepZ()));
-                if (neighbor != null && !net.minecraft.world.level.block.Block.shouldRenderFace(state, neighbor, direction)) {
-                    culledFaces++;
-                    continue;
+                //
+                // 判定用的方向是**模型的 cullface 分组方向**，不是面的几何法线 ——
+                // 这是原版的语义：模型 JSON 里 `"cullface": "north"` 声明这一组面
+                // 会被北边的邻居挡住。几何法线和 cullface 方向不一致时（多部件方块、
+                // 薄方块很常见），用几何法线就会查错格子，把玩家看得见的面剔掉。
+                //
+                // cullDirection 为 null = unculled 组（模型没声明 cullface），
+                // 原版对这一组不剔除，无条件渲染。
+                var direction = face.cullDirection();
+                if (direction != null) {
+                    var neighbor = lookup.get(packPosition(
+                            block.position().x() + direction.getStepX(),
+                            block.position().y() + direction.getStepY(),
+                            block.position().z() + direction.getStepZ()));
+                    if (neighbor != null && !net.minecraft.world.level.block.Block.shouldRenderFace(state, neighbor, direction)) {
+                        culledFaces++;
+                        continue;
+                    }
                 }
                 // 顶点位置平移到方块在结构里的位置（相对结构中心）
                 var positions = new float[12];
@@ -441,7 +452,6 @@ public class MinecraftRenderer extends Renderer {
                 }
                 faces.add(new PreviewMesh.PreviewFace(
                         positions, face.uvs().clone(),
-                        face.u0(), face.v0(), face.u1(), face.v1(),
                         face.tint(),
                         face.nx(), face.ny(), face.nz()));
             }
@@ -451,7 +461,6 @@ public class MinecraftRenderer extends Renderer {
             LOGGER.info("[preview] blocks={} faces={} culled={} visible={}",
                     lookup.size(), totalFaces, culledFaces, faces.size());
         }
-
         return new PreviewMesh(
                 List.copyOf(faces),
                 (float) centerX, (float) centerY, (float) centerZ,
@@ -462,16 +471,6 @@ public class MinecraftRenderer extends Renderer {
     /** 把方块坐标打包成一个 long，用作位置索引表的键。 */
     private static long packPosition(int x, int y, int z) {
         return ((long) x & 0x3FFFFFFL) << 38 | ((long) z & 0x3FFFFFFL) << 12 | ((long) y & 0xFFFL);
-    }
-
-    /** 面的法线 → 方向（用于邻接查询）。 */
-    private static net.minecraft.core.Direction directionOf(float nx, float ny, float nz) {
-        for (var direction : net.minecraft.core.Direction.values()) {
-            if (direction.getStepX() == nx && direction.getStepY() == ny && direction.getStepZ() == nz) {
-                return direction;
-            }
-        }
-        return null;
     }
 
     @Override
@@ -525,7 +524,6 @@ public class MinecraftRenderer extends Renderer {
             }
             faces.add(new PreviewMesh.PreviewFace(
                     rotated, face.uvs(),
-                    face.u0(), face.v0(), face.u1(), face.v1(),
                     face.tint(),
                     nx, ny, nz));
         }
@@ -572,20 +570,18 @@ public class MinecraftRenderer extends Renderer {
                 sy[i] = (float) (originY - positions[i * 3 + 1] * scale);
             }
             // GUI 管线会背面剔除：绕序必须和原版矩形填充一致（屏幕 y 向下 → 有向面积为负），
-            // 不一致就交换 v1 / v3（三角形带 (v0,v1,v2)(v2,v1,v3) 交换后正好反向）。
+            // 不一致就交换顶点 1 和顶点 3（三角形带 (v0,v1,v2)(v2,v1,v3) 交换后正好反向）。
+            //
+            // 【别就地改 uvs 数组】它是从网格里共享出来的引用，就地交换会**每帧翻转一次**，
+            // 累积下来贴图 UV 全错 → 采样到纯色（表现为「方块没有材质，只有明暗」）。
+            // 要交换就把索引换掉，不动原数组。
+            var i0 = 0;
+            var i1 = 1;
+            var i2 = 2;
+            var i3 = 3;
             if (signedArea(sx, sy) > 0) {
-                var tmpX = sx[1];
-                sx[1] = sx[3];
-                sx[3] = tmpX;
-                var tmpY = sy[1];
-                sy[1] = sy[3];
-                sy[3] = tmpY;
-                var tmpU = uvs[2];
-                uvs[2] = uvs[6];
-                uvs[6] = tmpU;
-                var tmpV = uvs[3];
-                uvs[3] = uvs[7];
-                uvs[7] = tmpV;
+                i1 = 3;
+                i3 = 1;
             }
             var color = face.tint();
             // 【26.2 修正 · 矩阵只施加一次】
@@ -604,13 +600,17 @@ public class MinecraftRenderer extends Renderer {
                     RenderPipelines.GUI_TEXTURED,
                     textureSetup,
                     new org.joml.Matrix3x2f(),
-                    tx[0], ty[0], tx[1], ty[1], tx[2], ty[2], tx[3], ty[3],
+                    tx[i0], ty[i0], tx[i1], ty[i1], tx[i2], ty[i2], tx[i3], ty[i3],
                     color,
                     new float[]{
-                            spriteU(face, uvs[0]), spriteV(face, uvs[1]),
-                            spriteU(face, uvs[2]), spriteV(face, uvs[3]),
-                            spriteU(face, uvs[4]), spriteV(face, uvs[5]),
-                            spriteU(face, uvs[6]), spriteV(face, uvs[7])
+                            // 【UV 已经是图集绝对坐标】MC 烘焙方块面时存的是
+                            // UVPair.pack(sprite.getU(u), sprite.getV(v)) —— getU/getV 返回的就是
+                            // 贴图在方块图集里的绝对位置。所以这里**不能再乘一次 sprite 矩形**，
+                            // 二次映射会把 UV 推到图集外面 → 采样到纯色（方块看起来没有材质）。
+                            uvs[i0 * 2], uvs[i0 * 2 + 1],
+                            uvs[i1 * 2], uvs[i1 * 2 + 1],
+                            uvs[i2 * 2], uvs[i2 * 2 + 1],
+                            uvs[i3 * 2], uvs[i3 * 2 + 1]
                     },
                     scissorRect
             ));
@@ -631,14 +631,75 @@ public class MinecraftRenderer extends Renderer {
         return depth / 4.0F;
     }
 
-    /** 贴图内坐标（0~1）→ 方块图集里的 u。 */
-    private static float spriteU(PreviewMesh.PreviewFace face, float u) {
-        return face.u0() + (face.u1() - face.u0()) * u;
+    /**
+     * 把一批 quad 收进结果（按 quad 身份去重）。
+     *
+     * @param cullDirection 这个分组的方向（cullface 分组）；
+     *                      {@code null} = unculled 组，原版对这一组不剔除
+     */
+    private static void collectQuads(java.util.List<ModelFace> result,
+                                      java.util.IdentityHashMap<net.minecraft.client.resources.model.geometry.BakedQuad, Boolean> seen,
+                                      List<net.minecraft.client.resources.model.geometry.BakedQuad> quads,
+                                      net.minecraft.core.Direction cullDirection) {
+        if (quads == null) {
+            return;
+        }
+        for (var quad : quads) {
+            if (seen.put(quad, Boolean.TRUE) != null) {
+                continue;
+            }
+            var positions = new float[12];
+            var uvs = new float[8];
+            for (int i = 0; i < 4; i++) {
+                var position = quad.position(i);
+                positions[i * 3] = position.x();
+                positions[i * 3 + 1] = position.y();
+                positions[i * 3 + 2] = position.z();
+                var packed = quad.packedUV(i);
+                uvs[i * 2] = net.minecraft.client.model.geom.builders.UVPair.unpackU(packed);
+                uvs[i * 2 + 1] = net.minecraft.client.model.geom.builders.UVPair.unpackV(packed);
+            }
+            // 明暗用几何法线（视觉上正确）；邻接剔除用 cullface 分组方向（原版语义）。
+            var faceDirection = quad.direction();
+            if (faceDirection == null) {
+                faceDirection = faceDirectionOf(positions);
+            }
+            if (faceDirection == null) {
+                continue;
+            }
+            result.add(new ModelFace(positions, uvs,
+                    shadeOf(faceDirection),
+                    faceDirection.getStepX(), faceDirection.getStepY(), faceDirection.getStepZ(),
+                    cullDirection));
+        }
     }
 
-    /** 贴图内坐标（0~1）→ 方块图集里的 v。 */
-    private static float spriteV(PreviewMesh.PreviewFace face, float v) {
-        return face.v0() + (face.v1() - face.v0()) * v;
+    /**
+     * 面的方向（兜底）：模型没给 direction 时，从顶点几何算。
+     * <p>
+     * 取前三个顶点算叉积，得到面的外法线 → 对应方向。
+     */
+    private static net.minecraft.core.Direction faceDirectionOf(float[] positions) {
+        // 顶点 0→1→2 的叉积
+        var ax = positions[3] - positions[0];
+        var ay = positions[4] - positions[1];
+        var az = positions[5] - positions[2];
+        var bx = positions[6] - positions[3];
+        var by = positions[7] - positions[4];
+        var bz = positions[8] - positions[5];
+        var nx = ay * bz - az * by;
+        var ny = az * bx - ax * bz;
+        var nz = ax * by - ay * bx;
+        if (nx == 0.0F && ny == 0.0F && nz == 0.0F) {
+            return null;
+        }
+        if (Math.abs(nx) >= Math.abs(ny) && Math.abs(nx) >= Math.abs(nz)) {
+            return nx > 0 ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST;
+        }
+        if (Math.abs(ny) >= Math.abs(nz)) {
+            return ny > 0 ? net.minecraft.core.Direction.UP : net.minecraft.core.Direction.DOWN;
+        }
+        return nz > 0 ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH;
     }
 
     /**
@@ -676,26 +737,21 @@ public class MinecraftRenderer extends Renderer {
                 var parts = new java.util.ArrayList<net.minecraft.client.renderer.block.dispatch.BlockStateModelPart>();
                 model.collectParts(random, parts);
                 for (var part : parts) {
+                    // 【按 cullface 分组收集，和原版渲染区块完全一致】
+                    // MC 的 `getQuads(direction)` 返回的是按模型 JSON 里声明的
+                    // **"cullface"** 分组的列表，不是按面的几何法线分组：
+                    //  - 6 个方向组：面声明了 `"cullface": "<方向>"` → 原版按**该方向**做邻接剔除
+                    //  - unculled 组（getQuads(null)）：面没声明 cullface → 原版**无条件渲染，不剔除**
+                    //
+                    // 之前把两个组混在一起、且用几何法线去查邻居，
+                    // 结果是：栅栏/楼梯这类多部件方块的侧面被误剔（用户可见的洞），
+                    // 而没有 cullface 的面（如雪片顶面）反而被错误地拿去剔了。
+                    var seen = new java.util.IdentityHashMap<net.minecraft.client.resources.model.geometry.BakedQuad, Boolean>();
                     for (var direction : net.minecraft.core.Direction.values()) {
-                        for (var quad : part.getQuads(direction)) {
-                            var positions = new float[12];
-                            var uvs = new float[8];
-                            for (int i = 0; i < 4; i++) {
-                                var position = quad.position(i);
-                                positions[i * 3] = position.x();
-                                positions[i * 3 + 1] = position.y();
-                                positions[i * 3 + 2] = position.z();
-                                var packed = quad.packedUV(i);
-                                uvs[i * 2] = net.minecraft.client.model.geom.builders.UVPair.unpackU(packed);
-                                uvs[i * 2 + 1] = net.minecraft.client.model.geom.builders.UVPair.unpackV(packed);
-                            }
-                            var sprite = quad.materialInfo().sprite();
-                            result.add(new ModelFace(positions, uvs,
-                                    sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1(),
-                                    shadeOf(direction),
-                                    direction.getStepX(), direction.getStepY(), direction.getStepZ()));
-                        }
+                        collectQuads(result, seen, part.getQuads(direction), direction);
                     }
+                    // unculled 组：cullDirection = null → 渲染时不剔除
+                    collectQuads(result, seen, part.getQuads(null), null);
                 }
             } catch (Throwable throwable) {
                 LOGGER.debug("Failed to build model faces for {}", key, throwable);

@@ -1,7 +1,12 @@
-﻿# 大结构预览的性能与正确性验证：
-# 起服 → 起客户端（打开 32x32x32 实心方块的剪贴板界面）→ 截图 → 读客户端日志里的剔除统计。
+﻿# 剪贴板预览的正确性与性能验证：
+# 起服 → 起客户端（打开指定 debug 界面）→ 截图 → 读客户端日志里的剔除统计。
 #
-# 用法：powershell -File tools\preview-stress.ps1
+# 用法：powershell -File tools\preview-stress.ps1 -Screen clipboard-partial
+#   clipboard-full     混合方块（完整方块）
+#   clipboard-partial  雪片/雪块/台阶/半砖/栅栏/沙子（不完整方块）
+#   clipboard-snow     石头地板 + 一层雪片
+#   clipboard-fence    相邻的栅栏与楼梯
+#   clipboard-big      实心 32x32x32（性能）
 param([string]$Screen = 'clipboard-big')
 $ErrorActionPreference = 'Stop'
 $proj = Split-Path -Parent $PSScriptRoot
