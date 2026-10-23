@@ -1,7 +1,6 @@
 package com.mcoo.buildwithease.screen.clipboard;
 
 import dev.huskuraft.universal.api.gui.Dimens;
-import dev.huskuraft.universal.api.gui.container.AbstractEntryList;
 import dev.huskuraft.universal.api.gui.container.EditableEntryList;
 import dev.huskuraft.universal.api.gui.slot.ItemSlot;
 import dev.huskuraft.universal.api.gui.text.TextWidget;
@@ -28,6 +27,13 @@ public final class StructureSnapshotList extends EditableEntryList<Snapshot> {
         private StructureSnapshotWidget snapshotWidget;
         private TextWidget textWidget;
         private TextWidget uuidTextWidget;
+        /**
+         * 图标网格实际占多高（像素）。
+         * <p>
+         * 条目高度必须和它一致 —— 不然条目自己的裁剪区会把下面的图标切掉，
+         * 列表的滚动范围也算不准（大结构就滚不到底）。
+         */
+        private int gridHeight;
 
         public SnapshotEntry(Entrance entrance, Snapshot snapshot) {
             super(entrance, snapshot);
@@ -49,10 +55,10 @@ public final class StructureSnapshotList extends EditableEntryList<Snapshot> {
                     xOffset = 0;
                     yOffset += Dimens.SLOT_HEIGHT + 2;
                 }
-//                if (yOffset > getHeight() - 4 - 11 -11 && !isFocused()) {
-//                    break;
-//                }
             }
+            // 图标网格占的高度：起始位置（标题 + UUID 两行）+ 每一行的高度
+            this.gridHeight = getItem().getItems().isEmpty() ? 0
+                    : 4 + 11 + 11 + yOffset + Dimens.SLOT_HEIGHT;
         }
 
         @Override
@@ -60,12 +66,19 @@ public final class StructureSnapshotList extends EditableEntryList<Snapshot> {
 
         }
 
+        /**
+         * 条目高度 = 图标网格实际占的高度。
+         * <p>
+         * 必须和实际排布一致：
+         * <ul>
+         *     <li>高度不够 → 条目自己的裁剪区会把下面的图标切掉（大结构尤其明显）；</li>
+         *     <li>高度不够 → 列表算出来的滚动范围也不对，滚不到底。</li>
+         * </ul>
+         * 所以这里始终按网格的实际行数算高度，列表用滚轮上下翻。
+         */
         @Override
         public int getHeight() {
-            if (((AbstractEntryList) getParent()).getSelected() == this) {
-                return Dimens.Icon.SIZE_66 + 4 + Math.max((getItem().getItems().size() + 8) / 9 - 2, 0) * (Dimens.SLOT_HEIGHT + 2);
-            }
-            return Dimens.Icon.SIZE_66 + 6;
+            return Math.max(Dimens.Icon.SIZE_66 + 6, this.gridHeight + 4);
         }
 
     }

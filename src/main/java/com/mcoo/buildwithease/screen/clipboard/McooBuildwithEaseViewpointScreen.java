@@ -39,13 +39,15 @@ public class McooBuildwithEaseViewpointScreen extends AbstractPanelScreen {
                 getScreenTitle().withColor(AbstractPanelScreen.TITLE_COLOR),
                 dev.huskuraft.universal.api.gui.text.TextWidget.Gravity.CENTER));
 
-        addWidget(axisButton("mcoo_build_with_ease.clipboard.viewpoint.axis_x", 0, 4f));
-        addWidget(axisButton("mcoo_build_with_ease.clipboard.viewpoint.axis_y", 1, 3f));
-        addWidget(axisButton("mcoo_build_with_ease.clipboard.viewpoint.axis_z", 2, 2f));
+        addWidget(axisButton("mcoo_build_with_ease.clipboard.viewpoint.axis_x", 0, "X", 4f));
+        addWidget(axisButton("mcoo_build_with_ease.clipboard.viewpoint.axis_y", 1, "Y", 3f));
+        addWidget(axisButton("mcoo_build_with_ease.clipboard.viewpoint.axis_z", 2, "Z", 2f));
 
         addWidget(Button.builder(getEntrance(),
                 Text.translate("mcoo_build_with_ease.clipboard.viewpoint.reset"), button -> {
             this.widget.resetView();
+            // 视角变了就退回上一页 —— 效果得在预览里才看得见
+            detach();
         }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0f, 1f).build());
 
         addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.cancel"), button -> {
@@ -53,12 +55,20 @@ public class McooBuildwithEaseViewpointScreen extends AbstractPanelScreen {
         }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 0f, 1f).build());
     }
 
-    /** 一个绕轴旋转 90° 的按钮（左键顺时针、右键逆时针）。 */
-    private Button axisButton(String translationKey, int axis, float row) {
-        return Button.builder(getEntrance(), Text.translate(translationKey), button -> {
+    /**
+     * 一个绕轴旋转 90° 的按钮（左键顺时针、右键逆时针）。
+     * <p>
+     * 文本里的 {@code %s} 是轴名 —— 翻译键只写「绕 %s 轴旋转 90°」，
+     * 轴名在运行时填进去（不填的话按钮上就会直接显示 %s）。
+     */
+    private Button axisButton(String translationKey, int axis, String axisName, float row) {
+        return Button.builder(getEntrance(), Text.translate(translationKey, axisName), button -> {
             // 左键顺时针（右手定则的负方向），右键逆时针
             var steps = button.lastMouseButton() == COUNTER_CLOCKWISE ? 1 : -1;
             this.widget.rotateAxis(axis, steps);
+            // 转完直接退回上一页：旋转的效果在预览里才看得见，
+            // 留在这个面板上玩家根本看不出转没转。
+            detach();
         }).setRightClickable().setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), row, 0f, 1f).build();
     }
 }

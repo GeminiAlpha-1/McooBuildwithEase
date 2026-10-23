@@ -576,5 +576,6 @@
   "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "Поворот на 90° вокруг оси %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "Поворот на 90° вокруг оси %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "Поворот на 90° вокруг оси %s",
-  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Сбросить вид"
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Сбросить вид",
+  "mcoo_build_with_ease.clipboard.viewpoint.tooltip": "Изменить ориентацию предпросмотра: повернуть вокруг оси X / Y / Z или вернуть вид по умолчанию"
 }

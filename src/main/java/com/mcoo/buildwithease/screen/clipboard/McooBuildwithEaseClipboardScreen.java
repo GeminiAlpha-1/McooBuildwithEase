@@ -10,7 +10,6 @@ import dev.huskuraft.universal.api.gui.button.Button;
 import dev.huskuraft.universal.api.gui.text.MessageTextWidget;
 import dev.huskuraft.universal.api.gui.text.TextWidget;
 import dev.huskuraft.universal.api.gui.tooltip.TooltipHelper;
-import dev.huskuraft.universal.api.input.OptionKeys;
 import dev.huskuraft.universal.api.platform.Entrance;
 import dev.huskuraft.universal.api.text.Text;
 import com.mcoo.buildwithease.building.clipboard.Clipboard;
@@ -23,14 +22,20 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
     private AbstractWidget titleTextWidget;
     private MessageTextWidget textWidget;
     private StructureSnapshotWidget snapshotWidget;
-    private Button enableButton;
     private Button doneButton;
     private Button libraryButton;
     private Button historyButton;
     private Button playerSharingButton;
     private Button clearButton;
     private Button downloadButton;
-//    private EditBox nameEditBox;
+    private Button viewpointButton;
+    /**
+     * 预览的视角状态。
+     * <p>
+     * 界面重新初始化时控件会被重建，控件里的视角参数就没了 ——
+     * 这里存一份，重建完再塞回去。
+     */
+    private StructureSnapshotWidget.ViewState viewState;
 
     public McooBuildwithEaseClipboardScreen(Entrance entrance) {
         super(entrance, Text.translate("mcoo_build_with_ease.clipboard.edit.title"), PANEL_WIDTH_60, PANEL_HEIGHT_FULL);
@@ -82,12 +87,11 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
 //        }).setBounds(getRight() - Button.DEFAULT_HEIGHT - PADDINGS_H - Button.DEFAULT_HEIGHT * 2 - Button.VERTICAL_PADDING * 2, getTop() + PANEL_TITLE_HEIGHT_1 + 4, Button.DEFAULT_HEIGHT, Button.DEFAULT_HEIGHT).build());
 
         this.snapshotWidget = addWidget(new StructureSnapshotWidget(getEntrance(), getLeft() + PADDINGS_H, getTop() + PANEL_TITLE_HEIGHT_1, getWidth() - PADDINGS_H * 2, getHeight() - PANEL_TITLE_HEIGHT_1 - PANEL_BUTTON_ROW_HEIGHT_2, clipboard.snapshot()));
+        // 重建控件之后把视角状态放回去（否则回到这个界面时预览的角度会被重置）
+        if (this.viewState != null) {
+            this.snapshotWidget.setViewState(this.viewState);
+        }
         this.textWidget = addWidget(new MessageTextWidget(getEntrance(), getLeft() + AbstractPanelScreen.PADDINGS_H, getTop() + PANEL_TITLE_HEIGHT_1, getWidth() - AbstractPanelScreen.PADDINGS_H * 2, getHeight() - PANEL_TITLE_HEIGHT_1 - PANEL_BUTTON_ROW_HEIGHT_2, Text.translate("mcoo_build_with_ease.clipboard.no_structure"), MessageTextWidget.Gravity.CENTER));
-
-        // 「视角」按钮浮在预览区的右上角：改绕轴朝向、回默认视角
-        addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.clipboard.viewpoint"), button -> {
-            new McooBuildwithEaseViewpointScreen(getEntrance(), this.snapshotWidget).attach();
-        }).setBounds(this.snapshotWidget.getRight() - 46 - 2, this.snapshotWidget.getTop() + 2, 46, Button.DEFAULT_HEIGHT).build());
 
 //        addWidget(Button.builder(getEntrance(), Text.text("Edit"), button -> {
 //        }).setBounds(this.snapshotWidget.getRight() - Button.DEFAULT_HEIGHT - 2, this.snapshotWidget.getTop() + 2 * 1 + Button.DEFAULT_HEIGHT * 0, Button.DEFAULT_HEIGHT, Button.DEFAULT_HEIGHT).build());
@@ -102,41 +106,50 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
 //        }).setBounds(this.snapshotWidget.getRight() - Button.DEFAULT_HEIGHT - 2, this.snapshotWidget.getTop() + 2 * 4 + Button.DEFAULT_HEIGHT * 3, Button.DEFAULT_HEIGHT, Button.DEFAULT_HEIGHT).build());
 
 
-        this.downloadButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.clipboard.download"), button -> {
-            new McooBuildwithEaseClipboardDownloadScreen(getEntrance(), this.clipboard.snapshot()).attach();
-        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0.5f, 0.5f).build());
-
-        this.clearButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.clear"), button -> {
-            this.clipboard = this.clipboard.withSnapshot(Snapshot.EMPTY);
-
-        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0.25f, 0.25f).build());
-
+        // 按钮排版：两排，每排三个等宽的按钮
+        //   第一排（上面）：历史 / 清除 / 视角
+        //   第二排（下面）：下载 / 导出 / 完成
+        // 「视角」原来浮在预览区右上角，正好把右上角的「下载」按钮盖住了，点不到。
         this.historyButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.history"), button -> {
             new McooBuildwithEaseStructureSnapshotsHistoryScreen(getEntrance(), snapshot -> {
                 this.clipboard = this.clipboard.withSnapshot(snapshot);
             }).attach();
-        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0f, 0.25f).build());
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0f, 1 / 3f).build());
 
-//        this.libraryButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.library"), button -> {
-//            new McooBuildwithEaseStructureSnapshotsLibraryScreen(getEntrance(), snapshot -> {
-//                this.clipboard = this.clipboard.withSnapshot(snapshot);
-//            }).attach();
-//        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 1 / 4f, 1 / 4f).build());
+        this.clearButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.clear"), button -> {
+            this.clipboard = this.clipboard.withSnapshot(Snapshot.EMPTY);
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 1 / 3f, 1 / 3f).build());
 
-        this.doneButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.done"), button -> {
-            detachAll();
+        this.viewpointButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.clipboard.viewpoint"), button -> {
+            new McooBuildwithEaseViewpointScreen(getEntrance(), this.snapshotWidget).attach();
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 2 / 3f, 1 / 3f).build());
+
+        this.downloadButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.clipboard.download"), button -> {
+            new McooBuildwithEaseClipboardDownloadScreen(getEntrance(), this.clipboard.snapshot()).attach();
         }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 0f, 1 / 3f).build());
 
         addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.clipboard.export_image"), button -> {
             new McooBuildwithEaseExportImageScreen(getEntrance(), this.snapshotWidget).attach();
         }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 1 / 3f, 1 / 3f).build());
 
-        this.enableButton = addWidget(Button.builder(getEntrance(), clipboard.enabled() ? Text.translate("mcoo_build_with_ease.clipboard.button.disable") : Text.translate("mcoo_build_with_ease.clipboard.button.enable"), button -> {
-            this.clipboard = clipboard.withEnabled(!clipboard.enabled());
-            recreate();
+        this.doneButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.done"), button -> {
+            detachAll();
         }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 2 / 3f, 1 / 3f).build());
 
+    }
 
+    /**
+     * 界面销毁前把预览的视角状态存下来。
+     * <p>
+     * 界面每次重新初始化都会重建控件（{@code init → recreate → onCreate}），
+     * 不存的话视角（转轴、拖动、缩放）每次回到这个界面都会被重置。
+     */
+    @Override
+    public void onDestroy() {
+        if (this.snapshotWidget != null) {
+            this.viewState = this.snapshotWidget.viewState();
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -155,9 +168,8 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
         this.clearButton.setTooltip(TooltipHelper.makeSummary(getTypeface(), Text.translate("mcoo_build_with_ease.button.clear"), Text.translate("mcoo_build_with_ease.clipboard.clear.tooltip")));
         this.clearButton.setActive(!clipboard.isEmpty());
 
-        this.enableButton.setTooltip(TooltipHelper.makeSummary(getTypeface(), clipboard.enabled() ? Text.translate("mcoo_build_with_ease.clipboard.button.disable") : Text.translate("mcoo_build_with_ease.clipboard.button.enable"), Text.translate("mcoo_build_with_ease.clipboard.enable_clipboard.tooltip", OptionKeys.KEY_ATTACK.getKeyBinding().getKey().getNameText(), OptionKeys.KEY_USE.getKeyBinding().getKey().getNameText())));
-
-
+        this.viewpointButton.setTooltip(TooltipHelper.makeSummary(getTypeface(), Text.translate("mcoo_build_with_ease.clipboard.viewpoint"), Text.translate("mcoo_build_with_ease.clipboard.viewpoint.tooltip")));
+        this.viewpointButton.setActive(!clipboard.isEmpty());
     }
 
 }

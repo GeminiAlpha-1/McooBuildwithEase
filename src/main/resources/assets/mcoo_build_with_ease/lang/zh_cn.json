@@ -577,5 +577,6 @@
   "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "绕 %s 轴旋转 90°",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "绕 %s 轴旋转 90°",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "绕 %s 轴旋转 90°",
-  "mcoo_build_with_ease.clipboard.viewpoint.reset": "回到默认视角"
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "回到默认视角",
+  "mcoo_build_with_ease.clipboard.viewpoint.tooltip": "调整预览的朝向：绕 X / Y / Z 轴旋转，或回到默认视角"
 }

@@ -577,5 +577,6 @@
   "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "Pivoter de 90° autour de l'axe %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "Pivoter de 90° autour de l'axe %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "Pivoter de 90° autour de l'axe %s",
-  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Réinitialiser la vue"
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Réinitialiser la vue",
+  "mcoo_build_with_ease.clipboard.viewpoint.tooltip": "Ajuster l'orientation de l'aperçu : faire pivoter autour de l'axe X / Y / Z ou revenir à la vue par défaut"
 }

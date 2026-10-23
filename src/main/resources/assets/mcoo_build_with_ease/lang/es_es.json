@@ -576,5 +576,6 @@
   "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "Girar 90° alrededor del eje %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "Girar 90° alrededor del eje %s",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "Girar 90° alrededor del eje %s",
-  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Restablecer vista"
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Restablecer vista",
+  "mcoo_build_with_ease.clipboard.viewpoint.tooltip": "Ajusta la orientación de la vista previa: gira alrededor del eje X / Y / Z o vuelve a la vista predeterminada"
 }

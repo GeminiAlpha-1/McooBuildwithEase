@@ -155,6 +155,23 @@ public class McooBuildwithEaseStructureScreen extends AbstractGridScreen<Structu
         return assignedKey;
     }
 
+    /**
+     * 再按一次快捷键就关掉这个面板。
+     * <p>
+     * 上游是「按住显示、松开关闭」，改成切换式之后没有「松开」这个时机了。
+     * 这里靠<b>界面收到的按键事件</b>判断，而不是轮询按键 ——
+     * 面板开着的时候按键不一定被登记成「点击」，轮询会漏掉，
+     * 结果就是「再按一次快捷键关不掉面板」。
+     */
+    @Override
+    public boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == this.assignedKey.getKey().getValue()) {
+            close();
+            return true;
+        }
+        return super.onKeyPressed(keyCode, scanCode, modifiers);
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();

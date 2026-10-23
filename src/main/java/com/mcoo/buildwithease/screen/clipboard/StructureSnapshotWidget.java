@@ -111,6 +111,41 @@ public final class StructureSnapshotWidget extends AbstractWidget {
     }
 
     /**
+     * 预览的视角状态。
+     * <p>
+     * 界面每次重新初始化都会把控件重建一遍（{@code init → recreate → onCreate}），
+     * 控件里的视角参数就跟着丢了 —— 所以视角状态得由外层（剪贴板界面）存着，
+     * 重建完再塞回去，不然「转了轴回到上一页发现什么都没变」。
+     */
+    public record ViewState(
+            float yaw,
+            float pitch,
+            float zoom,
+            float panX,
+            float panY,
+            dev.huskuraft.universal.api.renderer.PreviewOrientation orientation
+    ) {
+    }
+
+    /** 当前视角状态（外层存下来，重建后恢复）。 */
+    public ViewState viewState() {
+        return new ViewState(yaw, pitch, zoom, panX, panY, orientation);
+    }
+
+    /** 恢复视角状态。 */
+    public void setViewState(ViewState state) {
+        if (state == null) {
+            return;
+        }
+        this.yaw = state.yaw();
+        this.pitch = state.pitch();
+        this.zoom = state.zoom();
+        this.panX = state.panX();
+        this.panY = state.panY();
+        this.orientation = state.orientation();
+    }
+
+    /**
      * 绕世界某根轴把结构转 90°。
      *
      * @param axis  0=X，1=Y，2=Z

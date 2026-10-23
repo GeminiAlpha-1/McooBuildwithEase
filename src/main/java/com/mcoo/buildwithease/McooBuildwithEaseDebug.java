@@ -56,6 +56,13 @@ final class McooBuildwithEaseDebug {
                     clipboardScreen.getSnapshotWidget().requestExport(1024, 683);
                 } else if ("clipboard-export4k".equals(screen)) {
                     clipboardScreen.getSnapshotWidget().requestExport(4096, 2731);
+                } else if ("clipboard-history".equals(screen)) {
+                    // 快照历史专项测试：把这份快照塞进历史，然后直接打开历史列表
+                    entrance.getConfigStorage().update(config -> config
+                            .withClipboardConfig(config.clipboardConfig().appendHistory(clipboard.snapshot())));
+                    new com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseStructureSnapshotsHistoryScreen(
+                            entrance, snapshot -> {
+                    }).attach();
                 }
                 opened = true;
                 return;
@@ -275,6 +282,53 @@ final class McooBuildwithEaseDebug {
                     }
                 }
                 return clipboard("debug-big", blocks);
+            }
+            case "clipboard-history" -> {
+                // 快照历史专项测试：方块种类多 → 历史列表里的图标网格很高。
+                // 以前条目高度算不对，下面的图标会被裁掉，列表也滚不到底。
+                var kinds = new dev.huskuraft.universal.api.core.Item[]{
+                        dev.huskuraft.universal.api.core.Items.STONE.item(),
+                        dev.huskuraft.universal.api.core.Items.COBBLESTONE.item(),
+                        dev.huskuraft.universal.api.core.Items.MOSSY_COBBLESTONE.item(),
+                        dev.huskuraft.universal.api.core.Items.STONE_BRICKS.item(),
+                        dev.huskuraft.universal.api.core.Items.MOSSY_STONE_BRICKS.item(),
+                        dev.huskuraft.universal.api.core.Items.CRACKED_STONE_BRICKS.item(),
+                        dev.huskuraft.universal.api.core.Items.CHISELED_STONE_BRICKS.item(),
+                        dev.huskuraft.universal.api.core.Items.GRAVEL.item(),
+                        dev.huskuraft.universal.api.core.Items.SAND.item(),
+                        dev.huskuraft.universal.api.core.Items.SANDSTONE.item(),
+                        dev.huskuraft.universal.api.core.Items.CHISELED_SANDSTONE.item(),
+                        dev.huskuraft.universal.api.core.Items.CUT_SANDSTONE.item(),
+                        dev.huskuraft.universal.api.core.Items.SMOOTH_SANDSTONE.item(),
+                        dev.huskuraft.universal.api.core.Items.RED_SAND.item(),
+                        dev.huskuraft.universal.api.core.Items.RED_SANDSTONE.item(),
+                        dev.huskuraft.universal.api.core.Items.COAL_ORE.item(),
+                        dev.huskuraft.universal.api.core.Items.IRON_ORE.item(),
+                        dev.huskuraft.universal.api.core.Items.OAK_PLANKS.item(),
+                        dev.huskuraft.universal.api.core.Items.BRICKS.item(),
+                        dev.huskuraft.universal.api.core.Items.GLASS.item(),
+                        dev.huskuraft.universal.api.core.Items.OAK_LOG.item(),
+                        dev.huskuraft.universal.api.core.Items.OAK_LEAVES.item(),
+                        dev.huskuraft.universal.api.core.Items.OAK_SLAB.item(),
+                        dev.huskuraft.universal.api.core.Items.OAK_STAIRS.item(),
+                        dev.huskuraft.universal.api.core.Items.WHITE_WOOL.item(),
+                        dev.huskuraft.universal.api.core.Items.BLACK_WOOL.item(),
+                        dev.huskuraft.universal.api.core.Items.ICE.item(),
+                        dev.huskuraft.universal.api.core.Items.SNOW_BLOCK.item(),
+                        dev.huskuraft.universal.api.core.Items.SNOW.item(),
+                        dev.huskuraft.universal.api.core.Items.CLAY.item(),
+                        dev.huskuraft.universal.api.core.Items.BRICKS.item()
+                };
+                var column = 0;
+                for (var kind : kinds) {
+                    for (int i = 0; i < 4; i++) {
+                        blocks.add(new com.mcoo.buildwithease.building.clipboard.BlockData(
+                                new dev.huskuraft.universal.api.core.BlockPosition(column++, 0, 0),
+                                kind.getBlock().getDefaultBlockState(),
+                                null));
+                    }
+                }
+                return clipboard("debug-history", blocks);
             }
             default -> {
                 return null;

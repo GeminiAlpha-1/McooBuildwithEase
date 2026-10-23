@@ -577,5 +577,6 @@
   "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "Rotate 90° around %s axis",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "Rotate 90° around %s axis",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "Rotate 90° around %s axis",
-  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Reset view"
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Reset view",
+  "mcoo_build_with_ease.clipboard.viewpoint.tooltip": "Adjust the preview orientation: rotate around the X / Y / Z axis, or go back to the default view"
 }

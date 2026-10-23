@@ -577,5 +577,6 @@
   "mcoo_build_with_ease.clipboard.viewpoint.axis_x": "90° um %s-Achse drehen",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_y": "90° um %s-Achse drehen",
   "mcoo_build_with_ease.clipboard.viewpoint.axis_z": "90° um %s-Achse drehen",
-  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Ansicht zurücksetzen"
+  "mcoo_build_with_ease.clipboard.viewpoint.reset": "Ansicht zurücksetzen",
+  "mcoo_build_with_ease.clipboard.viewpoint.tooltip": "Ausrichtung der Vorschau ändern: um die X-/Y-/Z-Achse drehen oder zur Standardansicht zurückkehren"
 }
