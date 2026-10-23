@@ -244,7 +244,9 @@ public final class StructureSnapshotWidget extends AbstractWidget {
         }
         if (button == 0) {
             // 左键：旋转
-            yaw -= (float) deltaX * ROTATE_SPEED;
+            // 【方向】模型要跟着鼠标走 —— 往右拖，模型就往右转。
+            // 之前这里是减号，方向正好相反（往右拖模型往左转）。
+            yaw += (float) deltaX * ROTATE_SPEED;
             pitch = Math.max(-90.0F, Math.min(90.0F, pitch + (float) deltaY * ROTATE_SPEED));
         } else if (button == 1) {
             // 右键：平移
