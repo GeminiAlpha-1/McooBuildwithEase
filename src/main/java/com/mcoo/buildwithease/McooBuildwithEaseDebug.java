@@ -74,6 +74,8 @@ final class McooBuildwithEaseDebug {
                 case "render" -> new McooBuildwithEaseRenderSettingsImGuiScreen(entrance).attach();
                 // ImGui Shell 排布原型（左工具列表 / 中内容 / 右详情，假数据）—— 定观感用
                 case "shell" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellPreviewScreen(entrance).attach();
+                // 纹理喂入 spike：验证 ImGui 里能不能画 MC 的方块/物品图标
+                case "texspike" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseTextureSpikeScreen(entrance).attach();
                 case "builder" -> new McooBuildwithEaseBuilderSettingsScreen(entrance).attach();
                 case "clipboard" -> new McooBuildwithEaseClipboardScreen(entrance).attach();
                 case "radial" -> new McooBuildwithEaseStructureScreen(entrance, McooBuildwithEaseKeys.BUILD_MODE_RADIAL.getKeyBinding()).attach();

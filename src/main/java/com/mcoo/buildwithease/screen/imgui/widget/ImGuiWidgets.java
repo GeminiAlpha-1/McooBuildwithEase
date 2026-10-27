@@ -144,6 +144,40 @@ public final class ImGuiWidgets {
         imgui.ImGui.endChild();
     }
 
+    // ------------------------------------------------------------------
+    // 图像
+    // ------------------------------------------------------------------
+
+    /**
+     * 画一块纹理的指定 UV 区域（图标就靠它）。
+     *
+     * @param textureId ImGui 纹理 id，来源见 {@code McooImGuiTextures}（**每帧现取**，不要跨帧缓存）
+     * @param u0v0u1v1  纹理坐标：{@code {u0, v0, u1, v1}}；传 {@code null} 表示整张纹理
+     */
+    public static void image(long textureId, float width, float height, float[] u0v0u1v1) {
+        if (textureId == 0L) {
+            // 拿不到纹理时画个占位，别让界面出现"什么都没有"的错觉
+            imgui.ImGui.dummy(width, height);
+            return;
+        }
+        if (u0v0u1v1 == null || u0v0u1v1.length < 4) {
+            imgui.ImGui.image(textureId, width, height);
+            return;
+        }
+        imgui.ImGui.image(textureId, width, height,
+                u0v0u1v1[0], u0v0u1v1[1], u0v0u1v1[2], u0v0u1v1[3]);
+    }
+
+    /**
+     * 诊断用的原文输出（<b>不走 i18n</b>）。
+     * <p>
+     * 只给调试/原型界面打印数值用（纹理 id、UV、图集尺寸之类）。
+     * 面向玩家的文案一律走 {@link #text(String)} 那个 i18n 版本。
+     */
+    public static void diagnostic(String text) {
+        imgui.ImGui.textDisabled(text);
+    }
+
     private static String translate(String labelKey) {
         return Text.translate(labelKey).getString();
     }
