@@ -19,7 +19,7 @@ import com.mcoo.buildwithease.screen.general.McooBuildwithEaseGlobalGeneralSetti
 public class McooBuildwithEaseSettingsScreen extends AbstractPanelScreen {
 
     public McooBuildwithEaseSettingsScreen(Entrance entrance) {
-        super(entrance, Text.translate("mcoo_build_with_ease.settings.title"), PANEL_WIDTH_42, PANEL_TITLE_HEIGHT_1 + PANEL_BUTTON_ROW_HEIGHT_3);
+        super(entrance, Text.translate("mcoo_build_with_ease.settings.title"), PANEL_WIDTH_42, PANEL_TITLE_HEIGHT_1 + PANEL_BUTTON_ROW_HEIGHT_4 + PANEL_BUTTON_ROW_HEIGHT_3);
     }
 
     private Button constraintButton;
@@ -78,6 +78,18 @@ public class McooBuildwithEaseSettingsScreen extends AbstractPanelScreen {
 //            new McooBuildwithEaseClipboardSettingsScreen(getEntrance()).attach();
 //        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0f, 1f).build());
 
+        // 图案 / 剪贴板 / 玩家 三个入口先进 ImGui Shell 的对应面板。
+        // 【setBoundsGrid 的参数】第 5 个是**行号（从底往上数，0 = 最底一行）**，
+        // 第 6 个是列偏移，第 7 个是跨列数（>1 会横向占满，写成 2 就会得到一条横穿的怪按钮 —— 踩过）。
+        addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.pattern.title"), button -> {
+            new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "pattern").attach();
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 4f, 0f, 1f).build());
+        addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.clipboard.edit.title"), button -> {
+            new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "clipboard").attach();
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 5f, 0f, 1f).build());
+        addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.player_list.title"), button -> {
+            new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "players").attach();
+        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 6f, 0f, 1f).build());
         addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.button.done"), button -> {
             detach();
         }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 0f, 0f, 1f).build());
