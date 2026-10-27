@@ -23,6 +23,14 @@ public interface RenderLayerFactory {
      */
     RenderLayer createVanillaRenderLayer(VanillaLayer layer, ResourceLocation texture);
 
+    /**
+     * 创建一条自建渲染层。
+     *
+     * @param layer   自建管线
+     * @param texture 贴图位置（可空）
+     */
+    RenderLayer createCustomRenderLayer(CustomLayer layer, ResourceLocation texture);
+
     VertexFormat getVertexFormat(VertexFormats formats);
 
     VertexFormat.Mode getVertexFormatMode(VertexFormats.Modes modes);

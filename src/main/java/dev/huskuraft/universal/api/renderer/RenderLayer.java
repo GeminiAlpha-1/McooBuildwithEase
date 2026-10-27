@@ -31,4 +31,14 @@ public interface RenderLayer extends PlatformReference {
         return RenderLayerFactory.getInstance().createVanillaRenderLayer(layer, texture);
     }
 
+    /**
+     * 本模组自建的渲染层（带贴图）。
+     * <p>
+     * 自建管线能表达 vanilla {@code RenderType} 表达不了的语义
+     * （深度测试 / 加色混合 / 剔除），见 {@link CustomLayer}。
+     */
+    static RenderLayer custom(CustomLayer layer, ResourceLocation texture) {
+        return RenderLayerFactory.getInstance().createCustomRenderLayer(layer, texture);
+    }
+
 }

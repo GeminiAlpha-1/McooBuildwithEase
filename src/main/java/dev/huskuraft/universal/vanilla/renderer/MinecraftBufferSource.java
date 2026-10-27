@@ -51,6 +51,14 @@ public class MinecraftBufferSource implements BufferSource {
     private static final java.util.Set<String> DEBUG_LOGGED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /**
+     * 自建渲染管线的提交记录（每种管线每次会话最多一条）。
+     * <p>
+     * 用来确证自建管线（{@code RenderType.create} + {@code RenderPipelines#register}）
+     * 真的被画出去了，而不只是编译得过 —— 自建管线最典型的失败模式就是
+     * 「编译过、着色器也加载了，但一帧都没画出去」。
+     */
+    private static final java.util.Set<String> DEBUG_RENDER_LOGGED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    /**
      * 提交世界侧自定义几何时用的「单位矩阵」PoseStack。
      * <p>
      * 顶点已经按模型矩阵变换过了，这里再传一次有矩阵的 PoseStack 会让变换被应用两次。
@@ -136,6 +144,15 @@ public class MinecraftBufferSource implements BufferSource {
                     var v = batch.vertices.get(0);
                     LOGGER.debug("[world] layer={} firstVertex=({},{},{}) levelPose={}",
                             batch.renderType, v.x(), v.y(), v.z(), poseStack.last().pose());
+                }
+                // 自建管线的提交诊断：每种管线每次会话最多打一行。
+                // 用命名空间过滤（字符串比较，比进 HashMap 便宜），避免在热路径上做无谓的哈希。
+                var location = batch.renderType.pipeline().getLocation();
+                if ("mcoo_build_with_ease".equals(location.getNamespace())
+                        && DEBUG_RENDER_LOGGED.add(location.toString())) {
+                    LOGGER.info("[custom-pipeline] 提交自建管线 {}（深度测试={}，混合={}）",
+                            location, batch.renderType.pipeline().getDepthStencilState(),
+                            batch.renderType.pipeline().getColorTargetState());
                 }
                 collector.submitCustomGeometry(IDENTITY_POSE, batch.renderType, (pose, consumer) -> replay(batch, consumer));
             }

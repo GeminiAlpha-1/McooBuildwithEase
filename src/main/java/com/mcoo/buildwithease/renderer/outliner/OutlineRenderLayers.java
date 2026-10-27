@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import dev.huskuraft.universal.api.core.ResourceLocation;
+import dev.huskuraft.universal.api.renderer.CustomLayer;
 import dev.huskuraft.universal.api.renderer.RenderLayer;
 import dev.huskuraft.universal.api.renderer.RenderLayers;
 import dev.huskuraft.universal.api.renderer.VanillaLayer;
@@ -35,19 +36,29 @@ public abstract class OutlineRenderLayers extends RenderLayers {
     private static final Map<ResourceLocation, RenderLayer> SOLID_LAYERS = new ConcurrentHashMap<>();
 
     /**
-     * 选区实心层。
-     * <p>
-     * 上游这里有「重叠 / 不重叠」两套深度测试（NOTEQUAL / NEVER），26.2 的 vanilla 管线
-     * 只有固定的深度测试，所以三个变体现在共用这一条。
+     * 选区实心层（vanilla 实体管线，LEQUAL 深度测试）。
      */
     protected static final RenderLayer OUTLINE_SOLID = RenderLayer.vanilla(VanillaLayer.ENTITY_SOLID, BLANK_TEXTURE_LOCATION);
+
+    /**
+     * 选区实心层 · 重叠分支：<b>NOT_EQUAL</b> 深度测试 —— 只在「没有和已有几何重叠」的地方绘制。
+     * <p>
+     * 上游 1.21.3 用 {@code RenderStateShard} 能自由组合出这个语义，
+     * 26.2 的 vanilla {@code RenderType} 固定了深度测试 → 只能自建管线（见 {@code MinecraftCustomPipelines}）。
+     */
+    protected static final RenderLayer OUTLINE_SOLID_OVERLAP = RenderLayer.custom(CustomLayer.OUTLINE_SHELL, BLANK_TEXTURE_LOCATION);
+
+    /**
+     * 选区实心层 · 不重叠分支：<b>NEVER</b> 深度测试 —— 永远画在最上层。
+     */
+    protected static final RenderLayer OUTLINE_SOLID_NO_OVERLAP = RenderLayer.custom(CustomLayer.OUTLINE_OVERLAY, BLANK_TEXTURE_LOCATION);
 
     protected static final RenderLayer GLOWING_SOLID_DEFAULT = glowingSolid(RenderLayers.BLOCK_ATLAS_LOCATION);
     protected static final RenderLayer GLOWING_TRANSLUCENT_DEFAULT = glowingTranslucent(RenderLayers.BLOCK_ATLAS_LOCATION);
     protected static final RenderLayer ITEM_PARTIAL_SOLID = RenderLayer.vanilla(VanillaLayer.ENTITY_SOLID, RenderLayers.BLOCK_ATLAS_LOCATION);
     protected static final RenderLayer ITEM_PARTIAL_TRANSLUCENT = RenderLayer.vanilla(VanillaLayer.ENTITY_TRANSLUCENT, RenderLayers.BLOCK_ATLAS_LOCATION);
     protected static final RenderLayer FLUID = RenderLayer.vanilla(VanillaLayer.ENTITY_TRANSLUCENT, RenderLayers.BLOCK_ATLAS_LOCATION);
-    protected static final RenderLayer ADDITIVE = RenderLayer.vanilla(VanillaLayer.TRANSLUCENT_BLOCK);
+    protected static final RenderLayer ADDITIVE = RenderLayer.custom(CustomLayer.ADDITIVE, RenderLayers.BLOCK_ATLAS_LOCATION);
 
     public static RenderLayer outlineSolid() {
         return OUTLINE_SOLID;
@@ -56,11 +67,11 @@ public abstract class OutlineRenderLayers extends RenderLayers {
     /**
      * 选区实心层。
      *
-     * @param overlap 上游靠深度测试区分「重叠 / 不重叠」，26.2 的 vanilla 管线没有这个口子，
-     *                目前两个分支画出来是一样的
+     * @param overlap true = 只在没重叠的地方绘制（NOT_EQUAL 深度测试）；
+     *                false = 永远画在最上层（NEVER 深度测试）
      */
     public static RenderLayer outlineSolid(boolean overlap) {
-        return OUTLINE_SOLID;
+        return overlap ? OUTLINE_SOLID_OVERLAP : OUTLINE_SOLID_NO_OVERLAP;
     }
 
     /**

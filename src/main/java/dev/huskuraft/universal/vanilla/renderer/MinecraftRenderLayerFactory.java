@@ -5,11 +5,13 @@ import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 
 import dev.huskuraft.universal.api.core.ResourceLocation;
+import dev.huskuraft.universal.api.renderer.CustomLayer;
 import dev.huskuraft.universal.api.renderer.RenderLayer;
 import dev.huskuraft.universal.api.renderer.RenderLayerFactory;
 import dev.huskuraft.universal.api.renderer.VanillaLayer;
 import dev.huskuraft.universal.api.renderer.VertexFormat;
 import dev.huskuraft.universal.api.renderer.VertexFormats;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
@@ -49,6 +51,23 @@ public final class MinecraftRenderLayerFactory implements RenderLayerFactory {
             throw new IllegalArgumentException("渲染层 " + layer + " 需要贴图");
         }
         return texture;
+    }
+
+    @Override
+    public RenderLayer createCustomRenderLayer(CustomLayer layer, ResourceLocation texture) {
+        var id = toIdentifier(texture);
+        var pipeline = switch (layer) {
+            case OUTLINE_SHELL -> MinecraftCustomPipelines.OUTLINE_SHELL;
+            case OUTLINE_OVERLAY -> MinecraftCustomPipelines.OUTLINE_OVERLAY;
+            case ADDITIVE -> MinecraftCustomPipelines.ADDITIVE;
+        };
+        // 配方照抄 vanilla 的实体管线：Sampler0 贴图 + 光照图 + overlay
+        var builder = RenderSetup.builder(pipeline).useLightmap().useOverlay();
+        if (id != null) {
+            builder.withTexture("Sampler0", id);
+        }
+        var setup = builder.createRenderSetup();
+        return new MinecraftRenderLayer(layer.name(), RenderType.create(layer.name(), setup), id);
     }
 
     @Override

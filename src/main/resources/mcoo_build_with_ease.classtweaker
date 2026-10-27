@@ -25,6 +25,10 @@ accessible	field	net/minecraft/world/entity/player/Inventory	selected	I
 # RenderType#create 是包内可见（static）—— 自建渲染管线要用它把 RenderPipeline 包成 RenderType
 accessible	method	net/minecraft/client/renderer/rendertype/RenderType	create	(Ljava/lang/String;Lnet/minecraft/client/renderer/rendertype/RenderSetup;)Lnet/minecraft/client/renderer/rendertype/RenderType;
 
-# RenderPipelines#PIPELINES_BY_LOCATION 是 private static final Map —— 自建管线必须登记进去，
-# 否则 ShaderManager 不会加载它的着色器（它只扫 getStaticPipelines()）
-accessible	field	net/minecraft/client/renderer/RenderPipelines	PIPELINES_BY_LOCATION	Ljava/util/Map;
+# RenderPipelines#register 是 private static —— 自建管线必须登记进去，
+# 否则 ShaderManager 不会加载它的着色器（它只扫 getStaticPipelines() 这一张表）
+accessible	method	net/minecraft/client/renderer/RenderPipelines	register	(Lcom/mojang/blaze3d/pipeline/RenderPipeline;)Lcom/mojang/blaze3d/pipeline/RenderPipeline;
+
+# RenderPipelines#ENTITY_SNIPPET 是 private static final —— 照抄 vanilla 的配方，
+# 用同一个 snippet 建管线，bind group / 雾 / 光照才和主通道一致
+accessible	field	net/minecraft/client/renderer/RenderPipelines	ENTITY_SNIPPET	Lcom/mojang/blaze3d/pipeline/RenderPipeline$Snippet;
