@@ -689,5 +689,6 @@
   "mcoo_build_with_ease.player_list.title": "玩家与会话",
   "mcoo_build_with_ease.player_list.session": "会话",
   "mcoo_build_with_ease.player_list.online": "在线人数",
-  "mcoo_build_with_ease.player_list.no_session": "未连接到服务器会话（服务端未装模组或未授权）"
+  "mcoo_build_with_ease.player_list.no_session": "未连接到服务器会话（服务端未装模组或未授权）",
+  "mcoo_build_with_ease.clipboard.history": "快照历史"
 }

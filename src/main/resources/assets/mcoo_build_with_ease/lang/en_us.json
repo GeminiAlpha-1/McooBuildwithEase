@@ -689,5 +689,6 @@
   "mcoo_build_with_ease.player_list.title": "Players & Session",
   "mcoo_build_with_ease.player_list.session": "Session",
   "mcoo_build_with_ease.player_list.online": "Online",
-  "mcoo_build_with_ease.player_list.no_session": "No server session (server missing mod or not authorised)"
+  "mcoo_build_with_ease.player_list.no_session": "No server session (server missing mod or not authorised)",
+  "mcoo_build_with_ease.clipboard.history": "Snapshot history"
 }

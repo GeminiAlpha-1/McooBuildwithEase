@@ -50,6 +50,10 @@ final class McooBuildwithEaseDebug {
                     return;
                 }
                 if ("clipimgui".equals(screen)) {
+                    // 往历史里塞两条，才能验证面板里的「快照历史」区
+                    var snap = clipboard.snapshot();
+                    entrance.getConfigStorage().update(cfg -> cfg.withClipboardConfig(
+                            cfg.clipboardConfig().appendHistory(snap).appendHistory(snap)));
                     new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "clipboard").attach();
                     opened = true;
                     return;

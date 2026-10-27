@@ -77,6 +77,10 @@ public final class ClipboardPanel implements ImGuiPanel {
             return;
         }
 
+        // 历史先画：它要占底部一块固定空间，预览吃剩下的高度。
+        // 反过来（先画满屏预览、再画历史）历史会被挤出可视区 —— 踩过。
+        renderHistory();
+
         var avail = imgui.ImGui.getContentRegionAvail();
         float width = Math.max(1f, avail.x);
         float height = Math.max(1f, avail.y);
@@ -136,6 +140,8 @@ public final class ClipboardPanel implements ImGuiPanel {
         if (ImGuiWidgets.button("mcoo_build_with_ease.clipboard.rotate_y")) {
             camera.rotateAxis(1, 1);
         }
+        exportSizeIndex = ImGuiShell.fieldCombo("mcoo_build_with_ease.clipboard.export_size",
+                new String[]{"1024", "2048", "4096"}, exportSizeIndex);
         if (ImGuiWidgets.button("mcoo_build_with_ease.clipboard.export_png")) {
             exportImage();
         }
@@ -200,6 +206,46 @@ public final class ClipboardPanel implements ImGuiPanel {
     }
 
     /** 当前要预览的方块（结构没变就复用上次的结果）。 */
+    /**
+     * 快照历史（配置里持久化的最近若干份）。
+     * <p>
+     * 点一条就把它载入成当前剪贴板 —— 这是历史列表唯一有意义的动作；
+     * 「删除 / 收藏」这类留给集合（collections）那一套，不在这一版里混。
+     */
+    private void renderHistory() {
+        var history = entrance.getConfigStorage().get().clipboardConfig().history();
+        if (history == null || history.isEmpty()) {
+            return;
+        }
+        ImGuiWidgets.separator();
+        ImGuiWidgets.text("mcoo_build_with_ease.clipboard.history");
+        // 只列最近 8 条：历史可能很长，面板纵向空间有限
+        int shown = Math.min(history.size(), 8);
+        for (int i = history.size() - shown; i < history.size(); i++) {
+            var entry = history.get(i);
+            String label = "[" + (i + 1) + "] " + entry.blockData().size() + " 方块  "
+                    + java.time.Instant.ofEpochMilli(entry.createdTimestamp());
+            if (imgui.ImGui.selectable(label + "##history_" + i, false)) {
+                loadHistory(entry);
+            }
+        }
+    }
+
+    /** 把一条历史快照载入当前剪贴板。 */
+    private void loadHistory(com.mcoo.buildwithease.building.clipboard.Snapshot snapshot) {
+        var player = entrance.getClient().getPlayer();
+        if (player == null || snapshot == null) {
+            return;
+        }
+        var clipboard = entrance.getStructureBuilder().getContext(player).clipboard();
+        if (clipboard == null) {
+            return;
+        }
+        entrance.getStructureBuilder().setClipboard(player, clipboard.withSnapshot(snapshot));
+        // 载入后结构变了 → 强制下一次重建方块列表
+        blocks = null;
+        blocksFingerprint = 0;
+    }
     private List<PreviewBlock> blocks() {
         var snapshot = snapshot();
         if (snapshot == null) {
