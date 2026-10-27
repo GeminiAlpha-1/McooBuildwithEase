@@ -670,5 +670,6 @@
   "mcoo_build_with_ease.pattern.detail_type": "Type",
   "mcoo_build_with_ease.pattern.detail_name": "Name",
   "mcoo_build_with_ease.pattern.detail_valid": "Valid",
-  "mcoo_build_with_ease.pattern.detail_multiplier": "Volume"
+  "mcoo_build_with_ease.pattern.detail_multiplier": "Volume",
+  "mcoo_build_with_ease.builder_settings.help": "These settings change build behaviour and tool usage. Client-side only."
 }

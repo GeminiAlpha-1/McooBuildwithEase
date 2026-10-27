@@ -49,7 +49,7 @@ public final class ImGuiShell {
     private static final float RIGHT_RATIO = 0.24f;
 
     /** 右栏「标签在左、控件在右」时的标签列宽。 */
-    private static final float LABEL_COLUMN = 76f;
+    private static final float LABEL_COLUMN = 108f;
 
     private ImGuiShell() {
     }

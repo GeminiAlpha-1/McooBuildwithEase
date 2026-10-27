@@ -78,6 +78,7 @@ final class McooBuildwithEaseDebug {
                 case "shell" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance).attach();
                 case "render" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "render").attach();
                 case "clip" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "clipboard").attach();
+                case "builderimgui" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "builder").attach();
                 case "patternimgui" -> {
                     // 播种一份带默认变换器的图案：不然图案栈永远是空的，看不到列表长什么样
                     var debugPlayer = entrance.getClient().getPlayer();

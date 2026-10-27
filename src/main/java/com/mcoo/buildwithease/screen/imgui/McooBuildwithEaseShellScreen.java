@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.mcoo.buildwithease.McooBuildwithEaseClient;
 import com.mcoo.buildwithease.screen.common.McooBuildwithEaseScreen;
+import com.mcoo.buildwithease.screen.imgui.panel.BuilderSettingsPanel;
 import com.mcoo.buildwithease.screen.imgui.panel.ClipboardPanel;
 import com.mcoo.buildwithease.screen.imgui.panel.ImGuiPanel;
 import com.mcoo.buildwithease.screen.imgui.panel.PatternPanel;
@@ -50,6 +51,7 @@ public class McooBuildwithEaseShellScreen extends McooBuildwithEaseScreen implem
         List<ImGuiPanel> list = new ArrayList<>();
         list.add(new ClipboardPanel(getEntrance()));
         list.add(new PatternPanel(getEntrance()));
+        list.add(new BuilderSettingsPanel(getEntrance()));
         list.add(new RenderSettingsPanel(getEntrance()));
         return list;
     }

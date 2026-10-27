@@ -670,5 +670,6 @@
   "mcoo_build_with_ease.pattern.detail_type": "类型",
   "mcoo_build_with_ease.pattern.detail_name": "名称",
   "mcoo_build_with_ease.pattern.detail_valid": "参数有效",
-  "mcoo_build_with_ease.pattern.detail_multiplier": "体积倍率"
+  "mcoo_build_with_ease.pattern.detail_multiplier": "体积倍率",
+  "mcoo_build_with_ease.builder_settings.help": "这些设置调整建造行为与工具消耗规则，只影响本机客户端。"
 }
