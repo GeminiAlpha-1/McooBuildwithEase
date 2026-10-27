@@ -32,6 +32,11 @@ public final class ClipboardPanel implements ImGuiPanel {
     private static final String ID = "clipboard";
 
     private final McooBuildwithEaseClient entrance;
+
+    /** 导出尺寸选项（像素）：1K / 2K / 4K。 */
+    private static final int[] EXPORT_SIZES = {1024, 2048, 4096};
+    private int exportSizeIndex = 0;
+
     /** 视角状态（与自研 GUI 的预览控件共用同一份模型）。 */
     private final PreviewCameraModel camera = new PreviewCameraModel();
 
@@ -160,10 +165,11 @@ public final class ClipboardPanel implements ImGuiPanel {
                 .getGameDir().resolve("mcoo_build_with_ease_exports");
         var name = "preview_" + java.time.LocalDateTime.now()
                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".png";
+        int size = EXPORT_SIZES[Math.max(0, Math.min(exportSizeIndex, EXPORT_SIZES.length - 1))];
         renderer.request(blocks, camera.camera(), camera.orientation(),
-                1024, 1024, directory.resolve(name));
+                size, size, directory.resolve(name));
         entrance.getClient().getPlayer().sendMessage(Text.translate(
-                "mcoo_build_with_ease.clipboard.export_image.started", "1024×1024"));
+                "mcoo_build_with_ease.clipboard.export_image.started", size + "×" + size));
     }
 
     // ------------------------------------------------------------------

@@ -114,7 +114,108 @@ public final class PatternPanel implements ImGuiPanel {
                 String.format("%.2f×", transformer.volumeMultiplier()));
 
         ImGuiWidgets.separator();
+        renderEditor(transformer);
+    }
+
+    /**
+     * 按类型画参数表单。
+     * <p>
+     * 每种变换器都是不可变 record，参数改了要<b>换一个实例</b>再放回图案里 ——
+     * 所以统一走 {@link #replace(Transformer, Transformer)}：先用 withXxx 造新值，再整体写回。
+     */
+    private void renderEditor(Transformer transformer) {
+        if (transformer instanceof ArrayTransformer array) {
+            int x = ImGuiShell.fieldSliderInt("mcoo_build_with_ease.pattern.offset_x",
+                    array.offset().x(), -64, 64);
+            int y = ImGuiShell.fieldSliderInt("mcoo_build_with_ease.pattern.offset_y",
+                    array.offset().y(), -64, 64);
+            int z = ImGuiShell.fieldSliderInt("mcoo_build_with_ease.pattern.offset_z",
+                    array.offset().z(), -64, 64);
+            int count = ImGuiShell.fieldSliderInt("mcoo_build_with_ease.pattern.count",
+                    array.count(), 1, 64);
+            if (x != array.offset().x() || y != array.offset().y() || z != array.offset().z()) {
+                replace(transformer, array.withOffset(new dev.huskuraft.universal.api.math.Vector3i(x, y, z)));
+            } else if (count != array.count()) {
+                replace(transformer, array.withCount(count));
+            }
+            return;
+        }
+        if (transformer instanceof MirrorTransformer mirror) {
+            var axis = ImGuiShell.fieldCombo("mcoo_build_with_ease.pattern.axis",
+                    AXIS_NAMES, mirror.axis().ordinal());
+            int size = ImGuiShell.fieldSliderInt("mcoo_build_with_ease.pattern.size", mirror.size(), 1, 64);
+            if (axis != mirror.axis().ordinal()) {
+                replace(transformer, mirror.withAxis(AXIS_VALUES[axis]));
+            } else if (size != mirror.size()) {
+                replace(transformer, mirror.withSize(size));
+            }
+            return;
+        }
+        if (transformer instanceof RadialTransformer radial) {
+            var axis = ImGuiShell.fieldCombo("mcoo_build_with_ease.pattern.axis",
+                    AXIS_NAMES, radial.axis().ordinal());
+            int slices = ImGuiShell.fieldSliderInt("mcoo_build_with_ease.pattern.slices", radial.slices(), 2, 64);
+            int radius = ImGuiShell.fieldSliderInt("mcoo_build_with_ease.pattern.radius", radial.radius(), 1, 256);
+            int length = ImGuiShell.fieldSliderInt("mcoo_build_with_ease.pattern.length", radial.length(), 1, 256);
+            if (axis != radial.axis().ordinal()) {
+                replace(transformer, radial.withAxis(AXIS_VALUES[axis]));
+            } else if (slices != radial.slices()) {
+                replace(transformer, radial.withSlice(slices));
+            } else if (radius != radial.radius()) {
+                replace(transformer, radial.withRadius(radius));
+            } else if (length != radial.length()) {
+                replace(transformer, radial.withLength(length));
+            }
+            return;
+        }
+        if (transformer instanceof ItemRandomizer randomizer) {
+            // 物品随机器真正的编辑是「物品 + 概率」表，那是物品选择页的活；
+            // 这里只调三个枚举维度（顺序 / 目标 / 来源），配合下面的物品数只读展示。
+            var order = ImGuiShell.fieldCombo("mcoo_build_with_ease.pattern.randomizer_order",
+                    enumNames(ItemRandomizer.Order.values()), randomizer.order().ordinal());
+            var target = ImGuiShell.fieldCombo("mcoo_build_with_ease.pattern.randomizer_target",
+                    enumNames(ItemRandomizer.Target.values()), randomizer.target().ordinal());
+            var source = ImGuiShell.fieldCombo("mcoo_build_with_ease.pattern.randomizer_source",
+                    enumNames(ItemRandomizer.Source.values()), randomizer.source().ordinal());
+            if (order != randomizer.order().ordinal()) {
+                replace(transformer, randomizer.withOrder(ItemRandomizer.Order.values()[order]));
+            } else if (target != randomizer.target().ordinal()) {
+                replace(transformer, randomizer.withTarget(ItemRandomizer.Target.values()[target]));
+            } else if (source != randomizer.source().ordinal()) {
+                replace(transformer, randomizer.withSource(ItemRandomizer.Source.values()[source]));
+            }
+            ImGuiShell.fieldText("mcoo_build_with_ease.pattern.items", String.valueOf(randomizer.chances().size()));
+            return;
+        }
         ImGuiWidgets.diagnostic(describe(transformer));
+    }
+
+    private static final dev.huskuraft.universal.api.core.Axis[] AXIS_VALUES =
+            dev.huskuraft.universal.api.core.Axis.values();
+    private static final String[] AXIS_NAMES = enumNames(AXIS_VALUES);
+
+    private static String[] enumNames(Enum<?>[] values) {
+        String[] names = new String[values.length];
+        for (int i = 0; i < values.length; i++) {
+            names[i] = values[i].name();
+        }
+        return names;
+    }
+
+    /** 把一个变换器换成改好的新实例（record 不可变，只能整体替换）。 */
+    private void replace(Transformer oldTransformer, Transformer newTransformer) {
+        var pattern = pattern();
+        if (pattern == null) {
+            return;
+        }
+        var replacements = new java.util.ArrayList<Transformer>(pattern.transformers());
+        for (int i = 0; i < replacements.size(); i++) {
+            if (replacements.get(i).getId().equals(oldTransformer.getId())) {
+                replacements.set(i, newTransformer);
+                break;
+            }
+        }
+        setPattern(pattern.withTransformers(replacements));
     }
 
     /**
