@@ -64,6 +64,18 @@ public class McooBuildwithEaseTextureSpikeScreen extends McooBuildwithEaseScreen
             return;
         }
 
+        // ---- ImGui 输入自检 ----
+        // 用来分清「鼠标事件没到 ImGui」还是「到了但我算错了坐标」：
+        // 把鼠标挪到某个已知点，这里显示的坐标应该和那个点吻合（逻辑像素）。
+        var io = imgui.ImGui.getIO();
+        ImGuiWidgets.diagnostic("io.display = " + io.getDisplaySizeX() + " x " + io.getDisplaySizeY());
+        ImGuiWidgets.diagnostic("io.mouse   = " + io.getMousePosX() + ", " + io.getMousePosY()
+                + "   down=" + imgui.ImGui.isMouseDown(0)
+                + "   wantCaptureMouse=" + io.getWantCaptureMouse());
+        ImGuiWidgets.diagnostic("anyItemHovered=" + imgui.ImGui.isAnyItemHovered()
+                + "   anyItemActive=" + imgui.ImGui.isAnyItemActive());
+        ImGuiWidgets.separator();
+
         long atlasId = McooImGuiTextures.blockAtlasId();
         ImGuiWidgets.diagnostic("blocks atlas textureId = " + atlasId
                 + "  ready = " + McooImGuiTextures.isBlockAtlasReady());

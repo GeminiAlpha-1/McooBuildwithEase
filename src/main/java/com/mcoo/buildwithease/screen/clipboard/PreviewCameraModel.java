@@ -33,6 +33,31 @@ public final class PreviewCameraModel {
     private float panY;
     private PreviewOrientation orientation = PreviewOrientation.DEFAULT;
 
+    // ---- 滑条用的读写（微调：拖动旋转不可能精确到 1°） ----
+
+    public float yaw() {
+        return yaw;
+    }
+
+    public void setYaw(float value) {
+        yaw = value;
+    }
+
+    public float pitch() {
+        return pitch;
+    }
+
+    public void setPitch(float value) {
+        pitch = Math.max(-90.0F, Math.min(90.0F, value));
+    }
+
+    public float zoom() {
+        return zoom;
+    }
+
+    public void setZoom(float value) {
+        zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+    }
     /** 交给平台层渲染用的相机。 */
     public PreviewCamera camera() {
         return new PreviewCamera(yaw, pitch, zoom, panX, panY);

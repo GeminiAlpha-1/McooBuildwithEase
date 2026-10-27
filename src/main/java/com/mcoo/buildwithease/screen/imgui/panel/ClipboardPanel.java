@@ -104,6 +104,27 @@ public final class ClipboardPanel implements ImGuiPanel {
     public void renderDetails() {
         ImGuiShell.panelTitle("mcoo_build_with_ease.shell.details");
 
+        // 滑条：拖动旋转不可能精确到 1°，微调一律走这里。
+        // 也顺带兜住「鼠标拖动在某些机器上不跟手」的情况 —— 滑条是 ImGui 的标准控件，
+        // 走的是和按钮同一套输入路径。
+        float yaw = ImGuiShell.fieldSliderFloat("mcoo_build_with_ease.clipboard.slider_yaw",
+                camera.yaw(), -180f, 180f);
+        if (yaw != camera.yaw()) {
+            camera.setYaw(yaw);
+        }
+        float pitch = ImGuiShell.fieldSliderFloat("mcoo_build_with_ease.clipboard.slider_pitch",
+                camera.pitch(), -90f, 90f);
+        if (pitch != camera.pitch()) {
+            camera.setPitch(pitch);
+        }
+        float zoom = ImGuiShell.fieldSliderFloat("mcoo_build_with_ease.clipboard.slider_zoom",
+                camera.zoom(), 0.2f, 8f);
+        if (zoom != camera.zoom()) {
+            camera.setZoom(zoom);
+        }
+
+        ImGuiWidgets.separator();
+
         if (ImGuiWidgets.button("mcoo_build_with_ease.clipboard.viewpoint.title")) {
             camera.reset();
         }

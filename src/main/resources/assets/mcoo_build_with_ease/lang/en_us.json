@@ -663,5 +663,8 @@
   "mcoo_build_with_ease.clipboard.export_png": "Export PNG (1024)",
   "mcoo_build_with_ease.clipboard.empty": "Clipboard is empty (copy a structure first)",
   "mcoo_build_with_ease.clipboard.hint": "Drag to rotate · Right-drag to pan · Scroll to zoom",
-  "mcoo_build_with_ease.clipboard.rendering": "Rendering preview…"
+  "mcoo_build_with_ease.clipboard.rendering": "Rendering preview…",
+  "mcoo_build_with_ease.clipboard.slider_yaw": "Yaw",
+  "mcoo_build_with_ease.clipboard.slider_pitch": "Pitch",
+  "mcoo_build_with_ease.clipboard.slider_zoom": "Zoom"
 }

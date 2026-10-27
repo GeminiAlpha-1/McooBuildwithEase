@@ -663,5 +663,8 @@
   "mcoo_build_with_ease.clipboard.export_png": "导出 PNG（1024）",
   "mcoo_build_with_ease.clipboard.empty": "剪贴板是空的（先复制一个结构）",
   "mcoo_build_with_ease.clipboard.hint": "左键拖动旋转 · 右键拖动平移 · 滚轮缩放",
-  "mcoo_build_with_ease.clipboard.rendering": "正在渲染预览……"
+  "mcoo_build_with_ease.clipboard.rendering": "正在渲染预览……",
+  "mcoo_build_with_ease.clipboard.slider_yaw": "水平角",
+  "mcoo_build_with_ease.clipboard.slider_pitch": "俯仰角",
+  "mcoo_build_with_ease.clipboard.slider_zoom": "缩放"
 }
