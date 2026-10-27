@@ -660,7 +660,7 @@
   "mcoo_build_with_ease.shell.section_clipboard": "剪贴板",
   "mcoo_build_with_ease.shell.section_settings": "设置",
   "mcoo_build_with_ease.clipboard.rotate_y": "绕 Y 轴旋转 90°",
-  "mcoo_build_with_ease.clipboard.export_png": "导出 PNG（1024）",
+  "mcoo_build_with_ease.clipboard.export_png": "导出 PNG 1024",
   "mcoo_build_with_ease.clipboard.empty": "剪贴板是空的（先复制一个结构）",
   "mcoo_build_with_ease.clipboard.hint": "左键拖动旋转 · 右键拖动平移 · 滚轮缩放",
   "mcoo_build_with_ease.clipboard.rendering": "正在渲染预览……",
@@ -690,5 +690,7 @@
   "mcoo_build_with_ease.player_list.session": "会话",
   "mcoo_build_with_ease.player_list.online": "在线人数",
   "mcoo_build_with_ease.player_list.no_session": "未连接到服务器会话（服务端未装模组或未授权）",
-  "mcoo_build_with_ease.clipboard.history": "快照历史"
+  "mcoo_build_with_ease.clipboard.history": "快照历史",
+  "mcoo_build_with_ease.clipboard.enable": "启用剪贴板",
+  "mcoo_build_with_ease.player_list.request_permission": "申请修改权限"
 }

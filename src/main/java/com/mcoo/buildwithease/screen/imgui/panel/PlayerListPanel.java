@@ -27,6 +27,9 @@ public final class PlayerListPanel implements ImGuiPanel {
 
     private final McooBuildwithEaseClient entrance;
 
+    /** 权限申请的状态文案（null = 还没申请过）。异步往返的结果写在这里，不直接改界面。 */
+    private String permissionStatus;
+
     /** 选中的玩家 uuid（null = 默认第一个）。 */
     private java.util.UUID selectedId;
 
@@ -95,6 +98,16 @@ public final class PlayerListPanel implements ImGuiPanel {
         }
 
         ImGuiWidgets.separator();
+        // 改配置要过服务端权限校验（异步往返）：点一下发请求，结果写进 permissionStatus。
+        // 没有权限时服务端不会回包内容，按钮这一侧只负责"申请"，不假设自己一定能改。
+        if (ImGuiWidgets.button("mcoo_build_with_ease.player_list.request_permission")) {
+            requestPermission();
+        }
+        if (permissionStatus != null) {
+            ImGuiWidgets.diagnostic(permissionStatus);
+        }
+
+        ImGuiWidgets.separator();
         ImGuiWidgets.diagnostic("全局限制（只读）");
         renderConstraints(config.getGlobalConfig());
 
@@ -109,6 +122,28 @@ public final class PlayerListPanel implements ImGuiPanel {
             ImGuiWidgets.diagnostic("(沿用全局)");
         } else {
             renderConstraints(override);
+        }
+    }
+
+    /**
+     * 向服务端申请「能否修改设置」。
+     * <p>
+     * ⚠️ 这是<b>异步</b>的：回调在另一个时机执行，所以只把结果写进状态字段，
+     * 绝不在回调里直接操作 ImGui 状态（ImGui 是单线程逐帧的）。
+     */
+    private void requestPermission() {
+        var player = entrance.getClient().getPlayer();
+        if (player == null) {
+            permissionStatus = "没有玩家上下文";
+            return;
+        }
+        permissionStatus = "等待服务端回应……";
+        try {
+            entrance.getChannel().sendPacket(
+                    new com.mcoo.buildwithease.networking.packets.player.PlayerPermissionCheckPacket(player.getId()),
+                    packet -> permissionStatus = packet.granted() ? "有权限，可修改" : "无权限（需要 OP）");
+        } catch (Throwable error) {
+            permissionStatus = "发送失败：" + error.getClass().getSimpleName();
         }
     }
 

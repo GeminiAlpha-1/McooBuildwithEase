@@ -113,6 +113,19 @@ public final class ClipboardPanel implements ImGuiPanel {
     public void renderDetails() {
         ImGuiShell.panelTitle("mcoo_build_with_ease.shell.details");
 
+        // 剪贴板总开关：关掉时粘贴/快捷粘贴整体失效（和自研界面同一份状态）
+        var clipboard = clipboard();
+        if (clipboard != null) {
+            boolean clipboardEnabled = clipboard.enabled();
+            if (ImGuiShell.fieldCheckbox("mcoo_build_with_ease.clipboard.enable", clipboardEnabled)) {
+                var player = entrance.getClient().getPlayer();
+                if (player != null) {
+                    entrance.getStructureBuilder().setClipboard(player, clipboard.withEnabled(!clipboardEnabled));
+                }
+            }
+            ImGuiWidgets.separator();
+        }
+
         // 滑条：拖动旋转不可能精确到 1°，微调一律走这里。
         // 也顺带兜住「鼠标拖动在某些机器上不跟手」的情况 —— 滑条是 ImGui 的标准控件，
         // 走的是和按钮同一套输入路径。
@@ -257,6 +270,15 @@ public final class ClipboardPanel implements ImGuiPanel {
             blocksFingerprint = fingerprint;
         }
         return blocks;
+    }
+
+    /** 当前剪贴板（可能没有会话 → null）。 */
+    private com.mcoo.buildwithease.building.clipboard.Clipboard clipboard() {
+        var player = entrance.getClient().getPlayer();
+        if (player == null) {
+            return null;
+        }
+        return entrance.getStructureBuilder().getContext(player).clipboard();
     }
 
     private com.mcoo.buildwithease.building.clipboard.Snapshot snapshot() {

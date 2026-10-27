@@ -660,7 +660,7 @@
   "mcoo_build_with_ease.shell.section_clipboard": "Clipboard",
   "mcoo_build_with_ease.shell.section_settings": "Settings",
   "mcoo_build_with_ease.clipboard.rotate_y": "Rotate 90° around Y",
-  "mcoo_build_with_ease.clipboard.export_png": "Export PNG (1024)",
+  "mcoo_build_with_ease.clipboard.export_png": "Export PNG 1024",
   "mcoo_build_with_ease.clipboard.empty": "Clipboard is empty (copy a structure first)",
   "mcoo_build_with_ease.clipboard.hint": "Drag to rotate · Right-drag to pan · Scroll to zoom",
   "mcoo_build_with_ease.clipboard.rendering": "Rendering preview…",
@@ -690,5 +690,7 @@
   "mcoo_build_with_ease.player_list.session": "Session",
   "mcoo_build_with_ease.player_list.online": "Online",
   "mcoo_build_with_ease.player_list.no_session": "No server session (server missing mod or not authorised)",
-  "mcoo_build_with_ease.clipboard.history": "Snapshot history"
+  "mcoo_build_with_ease.clipboard.history": "Snapshot history",
+  "mcoo_build_with_ease.clipboard.enable": "Enable clipboard",
+  "mcoo_build_with_ease.player_list.request_permission": "Request permission"
 }
