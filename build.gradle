@@ -98,7 +98,9 @@ dependencies {
 // 从 ImGui 库里抽出宿主类（cn/enaium/**，含 4 个 mixin）。
 // ⚠️ 它的着色器资源（assets/fabric-gui-imgui/shaders/core/imgui.{vsh,fsh}）不在这里抽 ——
 //    而是直接 vendor 进了 src/main/resources（dev 客户端只认那个目录，抽到 build/ 里取不到）。
-tasks.register('extractImguiClasses', Copy) {
+// 用 Sync 而不是 Copy：Sync 会先清掉目标目录里的陈旧文件
+// （否则上一版抽进去的 assets 会留在 build/ 里，和 src/main/resources 里的撞成重复条目）。
+tasks.register('extractImguiClasses', Sync) {
 	from zipTree(configurations.imguiBundle.singleFile)
 	into "$buildDir/imgui/classes"
 	include 'cn/enaium/**'
