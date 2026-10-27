@@ -2,7 +2,10 @@
 param(
     [Parameter(Mandatory = $true)][string]$Out,
     [int]$DelaySeconds = 0,
-    [string]$TitleLike = 'Minecraft'
+    [string]$TitleLike = 'Minecraft',
+    # 指定窗口所属进程。多开客户端时按标题挑会抓到别的实例（甚至上一个没退干净的），
+    # 而截图内容看着「也是 Minecraft 界面」，极难发现 —— 所以调用方抓到 pid 就显式传进来。
+    [int]$TargetPid = 0
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
@@ -35,7 +38,14 @@ if ($DelaySeconds -gt 0) { Start-Sleep -Seconds $DelaySeconds }
 $candidates = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -ne '' }
 Write-Host "候选窗口:"
 $candidates | ForEach-Object { Write-Host ("   pid=" + $_.Id + " title='" + $_.MainWindowTitle + "'") }
-$target = $candidates | Where-Object { $_.MainWindowTitle -like "*$TitleLike*" } | Select-Object -First 1
+$target = $null
+if ($TargetPid -ne 0) {
+    $target = Get-Process -Id $TargetPid -ErrorAction SilentlyContinue
+    if (-not $target -or $target.MainWindowHandle -eq 0) { Write-Host ("指定 pid " + $TargetPid + " 没有可用窗口"); exit 1 }
+}
+if (-not $target) {
+    $target = $candidates | Where-Object { $_.MainWindowTitle -like "*$TitleLike*" } | Select-Object -First 1
+}
 if (-not $target) {
     $target = $candidates | Where-Object { $_.ProcessName -eq 'java' } | Select-Object -First 1
     if ($target) { Write-Host ("没有名字匹配 '" + $TitleLike + "' 的窗口，退而使用 java 进程窗口: " + $target.MainWindowTitle) }

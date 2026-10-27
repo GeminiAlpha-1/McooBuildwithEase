@@ -27,3 +27,6 @@ TEST-CHECKLIST.md
 # 操作系统
 .DS_Store
 Thumbs.db
+
+# 字体工具的中间产物（变量字体源 / 子集临时文件，可用 tools/font 重建）
+tools/font/.cache/
