@@ -63,7 +63,7 @@ public final class PlayerListPanel implements ImGuiPanel {
             var id = player.getProfile().getId();
             boolean selected = id.equals(selectedId);
             // 名字前面加个圆点：在线玩家列表里"当前选中"和"名字"是两回事，别混
-            String label = (selected ? "● " : "○ ") + player.getDisplayName().getString();
+            String label = (selected ? "● " : "○ ") + nameOf(player);
             if (ImGuiShell.navItemRaw(label, selected)) {
                 selectedId = id;
             }
@@ -104,7 +104,7 @@ public final class PlayerListPanel implements ImGuiPanel {
         }
         var override = config.playerConfigs().get(selected.getProfile().getId());
         ImGuiWidgets.separator();
-        ImGuiWidgets.diagnostic("玩家覆盖：" + selected.getDisplayName().getString());
+        ImGuiWidgets.diagnostic("玩家覆盖：" + nameOf(selected));
         if (override == null) {
             ImGuiWidgets.diagnostic("(沿用全局)");
         } else {
@@ -134,6 +134,22 @@ public final class PlayerListPanel implements ImGuiPanel {
 
     private static String num(Integer value) {
         return value == null ? "默认" : String.valueOf(value);
+    }
+
+    /**
+     * 玩家显示名。
+     * <p>
+     * ⚠️ {@code PlayerInfo#getDisplayName()} 在部分实现里是 <b>null</b>（进服早期/离线信息未同步），
+     * 直接 {@code getString()} 会 NPE —— 踩过：整栏变成 "panel content failed"。
+     * 所以一律回退到 profile 里的名字。
+     */
+    private static String nameOf(PlayerInfo player) {
+        var display = player.getDisplayName();
+        if (display != null) {
+            return display.getString();
+        }
+        var profile = player.getProfile();
+        return profile == null ? "?" : profile.getName();
     }
 
     private List<PlayerInfo> players() {
