@@ -64,11 +64,11 @@ public class McooBuildwithEaseSettingsScreen extends AbstractPanelScreen {
 //        this.renderButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.render_settings.title"), button -> {
 //            new McooBuildwithEaseRenderSettingsScreen(getEntrance()).attach();
 //        }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 1f, 0f, 1f).build());
-        // 渲染设置改成 ImGui 版（自研 GUI 撑不住 13 个模块 / 58 个参数的界面）。
+        // 渲染设置已并入 ImGui Shell（三栏：左导航 / 中内容 / 右详情）。
         // 没装 ImGui 库就不显示这个入口 —— 二级菜单整体隐藏，不崩。
         if (dev.huskuraft.universal.api.gui.ImGuiSupport.isAvailable()) {
             addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.render_settings.title"), button -> {
-                new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseRenderSettingsImGuiScreen(getEntrance()).attach();
+                new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "render").attach();
             }).setBoundsGrid(getLeft(), getTop(), getWidth(), getHeight(), 3f, 0f, 1f).build());
         }
 //        this.patterntButton = addWidget(Button.builder(getEntrance(), Text.translate("mcoo_build_with_ease.pattern_settings.title"), button -> {

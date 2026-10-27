@@ -73,8 +73,20 @@ public class McooBuildwithEaseTextureSpikeScreen extends McooBuildwithEaseScreen
 
         ImGuiWidgets.separator();
 
-        // ② 按 UV 裁出的图标网格：物品选择页 / 图案列表就长这样
-        ImGuiWidgets.diagnostic("2) icon grid cropped by UV (" + SPRITES.length + " blocks)");
+        // ② 等轴测图标：三个四边形拼出「立方体」观感（不需要 FBO）
+        ImGuiWidgets.diagnostic("2) isometric icons (3 quads per block, no FBO)");
+        for (int i = 0; i < SPRITES.length; i++) {
+            if (i % ICON_COLUMNS != 0) {
+                imgui.ImGui.sameLine(0f, 4f);
+            }
+            float[] uv = McooImGuiTextures.blockSpriteUv(SPRITES[i]);
+            ImGuiWidgets.blockIcon(atlasId, uv, ICON_SIZE);
+        }
+
+        ImGuiWidgets.separator();
+
+        // ③ 按 UV 裁出的平面图标：和上面的等轴测版对照
+        ImGuiWidgets.diagnostic("3) flat icons cropped by UV (for comparison)");
         for (int i = 0; i < SPRITES.length; i++) {
             if (i % ICON_COLUMNS != 0) {
                 imgui.ImGui.sameLine(0f, 4f);

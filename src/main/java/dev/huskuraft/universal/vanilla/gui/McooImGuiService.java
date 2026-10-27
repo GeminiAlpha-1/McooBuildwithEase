@@ -167,8 +167,9 @@ public final class McooImGuiService extends DefaultImGui {
         //    addChar(char) 收的是无符号 16 位，可以安全表达这些码点。
         addRangeUnsigned(ranges, 0xFF00, 0xFFEF);                        // 全角
         addRangeUnsigned(ranges, 0x4E00, 0x9FFF);                        // CJK 统一汉字（字体里的子集会被烘进去）
-        // 界面里会直接用到的符号：修饰键 / 状态图标 / 方向箭头
-        ranges.addText("⌘⌃⎇⇧❖⚠✔✖⬆⬇➡⬅☠☢❤✏←↑→↓");
+        // 界面里会直接用到的符号：修饰键 / 状态图标 / 方向箭头 / 列表行首标记与折叠三角
+        // （字体子集里也必须有同一批，见 tools/font/make_subset.py）
+        ranges.addText("⌘⌃⎇⇧❖⚠✔✖⬆⬇➡⬅☠☢❤✏←↑→↓●○■□▸▾");
 
         // 范围数组要一直活到 build()：见字段注释（native 侧存的是指针，不是副本）
         glyphRangesRef = ranges.buildRanges();

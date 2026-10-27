@@ -136,9 +136,18 @@ public final class ImGuiShell {
      * @return 本帧是否被点击
      */
     public static boolean navItem(String labelKey, boolean selected) {
+        return navItemRaw(translate(labelKey), selected);
+    }
+
+    /**
+     * 同 {@link #navItem}，但标签已经是<b>成品文本</b>（动态拼接的行，不是 i18n 键）。
+     * <p>
+     * 用于列表项：模块名、方块名、文件名这类内容本身就是数据、翻译在数据源里做过了。
+     */
+    public static boolean navItemRaw(String label, boolean selected) {
         float width = ImGui.getContentRegionAvail().x;
         float height = ImGui.getTextLineHeight() + 6f;
-        return ImGui.selectable(translate(labelKey), selected,
+        return ImGui.selectable(label, selected,
                 ImGuiSelectableFlags.None, width, height);
     }
 
@@ -188,22 +197,57 @@ public final class ImGuiShell {
         return holder[0];
     }
 
-    /** 开关（左标签 + 右勾选框）。 */
+    /** 浮点滑条（左标签 + 右滑条）。 */
+    public static float fieldSliderFloat(String labelKey, float value, float min, float max) {
+        labelColumn(labelKey);
+        ImGui.setNextItemWidth(-1f);
+        float[] holder = {value};
+        ImGui.sliderFloat("##field_" + labelKey, holder, min, max);
+        return holder[0];
+    }
+
+    /** 开关（左标签 + 右勾选框）。返回<b>新值</b>（ImGui 的 checkbox 语义：点击即翻转）。 */
     public static boolean fieldCheckbox(String labelKey, boolean value) {
-        boolean[] changed = {false};
         ImGui.alignTextToFramePadding();
         ImGui.text(translate(labelKey));
         ImGui.sameLine(LABEL_COLUMN);
-        if (ImGui.checkbox("##field_" + labelKey, value)) {
-            changed[0] = true;
-        }
-        return changed[0] ? !value : value;
+        return ImGui.checkbox("##field_" + labelKey, value);
     }
 
     /** 只读的一行「标签 : 值」，用于展示不可编辑的信息。 */
     public static void fieldText(String labelKey, String value) {
         labelColumn(labelKey);
         ImGui.textDisabled(value);
+    }
+
+    /** 下拉选择（左标签 + 右下拉）。 */
+    public static int fieldCombo(String labelKey, String[] items, int currentIndex) {
+        if (items.length == 0) {
+            return currentIndex;
+        }
+        labelColumn(labelKey);
+        ImGui.setNextItemWidth(-1f);
+        var holder = new imgui.type.ImInt(Math.max(0, Math.min(currentIndex, items.length - 1)));
+        ImGui.combo("##field_" + labelKey, holder, items);
+        return holder.get();
+    }
+
+    /** 颜色选择（左标签 + 右色块）。 */
+    public static int fieldColor(String labelKey, int argb) {
+        labelColumn(labelKey);
+        ImGui.setNextItemWidth(-1f);
+        float[] rgba = {
+                ((argb >> 16) & 0xFF) / 255f,
+                ((argb >> 8) & 0xFF) / 255f,
+                (argb & 0xFF) / 255f,
+                ((argb >>> 24) & 0xFF) / 255f,
+        };
+        ImGui.colorEdit4("##field_" + labelKey, rgba);
+        int r = Math.round(rgba[0] * 255f) & 0xFF;
+        int g = Math.round(rgba[1] * 255f) & 0xFF;
+        int b = Math.round(rgba[2] * 255f) & 0xFF;
+        int a = Math.round(rgba[3] * 255f) & 0xFF;
+        return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
     private static void labelColumn(String labelKey) {

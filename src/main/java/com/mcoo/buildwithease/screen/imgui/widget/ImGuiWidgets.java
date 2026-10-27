@@ -178,6 +178,75 @@ public final class ImGuiWidgets {
         imgui.ImGui.textDisabled(text);
     }
 
+    // ------------------------------------------------------------------
+    // 方块图标（等轴测）
+    // ------------------------------------------------------------------
+
+    /** 顶面 / 左面 / 右面的明暗（ImU32 = 0xAABBGGRR，灰度三面一致即可）。 */
+    private static final int FACE_TOP = 0xFFFFFFFF;
+    private static final int FACE_LEFT = 0xFFB4B4B4;
+    private static final int FACE_RIGHT = 0xFF8C8C8C;
+
+    /**
+     * 画一个<b>等轴测方块图标</b>：同一张方块贴图凑出「顶面 + 左面 + 右面」，三面各自调亮度。
+     *
+     * <h3>为什么不用离屏 3D 烘图</h3>
+     * 真 3D 要建 FBO、重定向 render pass（{@code RenderSystem.outputColorTextureOverride}）、
+     * 还要处理"不能在 ImGui 帧里烘"的顺序问题 —— 风险大、跟版成本高。
+     * 而方块图标要的只是"看着像个立方体"，用三个四边形拼就够了：
+     * 零 GPU 资源、零 pass 嵌套、OpenGL 与 Vulkan 都一样。
+     * <p>
+     * ⚠️ 贴图会被拉伸到面上（方块贴图本来就是 16×16 平铺，观感正常）；
+     * 非立方体方块（楼梯、栅栏）用这张图标会失真 —— 那种留给将来的真 3D 烘图。
+     *
+     * @param textureId 纹理 id（见 {@code McooImGuiTextures}，每帧现取）
+     * @param uv        sprite 的 {@code {u0, v0, u1, v1}}
+     * @param size      图标外接正方形边长
+     */
+    public static void blockIcon(long textureId, float[] uv, float size) {
+        if (textureId == 0L || uv == null || uv.length < 4) {
+            imgui.ImGui.dummy(size, size);
+            return;
+        }
+        var drawList = imgui.ImGui.getWindowDrawList();
+        var origin = imgui.ImGui.getCursorScreenPos();
+
+        float half = size * 0.5f;          // 半宽
+        float quarter = half * 0.5f;       // 菱形的半高（= 半宽/2，等轴测的 2:1 斜度）
+        float depth = half;                // 侧面垂直高度
+        float cx = origin.x + half;
+        float topY = origin.y;
+
+        // 顶面菱形的四个顶点（上 / 右 / 下 / 左）
+        float tX = cx, tY = topY;
+        float rX = cx + half, rY = topY + quarter;
+        float bX = cx, bY = topY + quarter * 2f;
+        float lX = cx - half, lY = topY + quarter;
+
+        float u0 = uv[0], v0 = uv[1], u1 = uv[2], v1 = uv[3];
+
+        // 顶面
+        drawList.addImageQuad(textureId,
+                tX, tY, rX, rY, bX, bY, lX, lY,
+                u0, v0, u1, v0, u1, v1, u0, v1,
+                FACE_TOP);
+
+        // 左面：菱形左下边向下拉 depth
+        drawList.addImageQuad(textureId,
+                lX, lY, bX, bY, bX, bY + depth, lX, lY + depth,
+                u0, v0, u1, v0, u1, v1, u0, v1,
+                FACE_LEFT);
+
+        // 右面：菱形右下边向下拉 depth
+        drawList.addImageQuad(textureId,
+                bX, bY, rX, rY, rX, rY + depth, bX, bY + depth,
+                u0, v0, u1, v0, u1, v1, u0, v1,
+                FACE_RIGHT);
+
+        // 占位，让后续控件跳过这块区域
+        imgui.ImGui.dummy(size, size);
+    }
+
     private static String translate(String labelKey) {
         return Text.translate(labelKey).getString();
     }

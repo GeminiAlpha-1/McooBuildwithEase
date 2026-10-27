@@ -67,7 +67,11 @@ def base_chars() -> set[str]:
     out.update(chr(c) for c in range(0x3000, 0x3040))    # CJK 标点
     out.update(chr(c) for c in range(0xFF00, 0xFFF0))    # 全角
     out.update(chr(c) for c in range(0x400, 0x500))      # 西里尔（ru_ru）
-    out.update("⌘⌃⎇⇧❖⚠✔✖⬆⬇➡⬅☠☢❤✏←↑→↓")
+    # 界面里会直接出现的符号：
+    #   修饰键/状态图标（⌘⌃⎇⇧❖⚠✔✖⬆⬇➡⬅☠☢❤✏←↑→↓）
+    #   列表行首标记与折叠三角（●○■□▸▾）
+    # 少一个就会在界面上显示成方块/问号 —— 踩过（模块列表前的 ● 就漏了）。
+    out.update("⌘⌃⎇⇧❖⚠✔✖⬆⬇➡⬅☠☢❤✏←↑→↓●○■□▸▾")
     return out
 
 

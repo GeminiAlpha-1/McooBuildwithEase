@@ -4,7 +4,6 @@ import com.mcoo.buildwithease.screen.builer.McooBuildwithEaseBuilderSettingsScre
 import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseClipboardScreen;
 import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseSaveFileScreen;
 import com.mcoo.buildwithease.screen.general.McooBuildwithEaseGeneralSettingsScreen;
-import com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseRenderSettingsImGuiScreen;
 import com.mcoo.buildwithease.screen.pattern.McooBuildwithEasePatternScreen;
 import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSessionStatusScreen;
 import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSettingsScreen;
@@ -70,10 +69,9 @@ final class McooBuildwithEaseDebug {
             }
             switch (screen) {
                 case "settings" -> new McooBuildwithEaseSettingsScreen(entrance).attach();
-                // ImGui 版渲染设置（13 个模块 / 58 个参数）—— 用来无人值守截图核对
-                case "render" -> new McooBuildwithEaseRenderSettingsImGuiScreen(entrance).attach();
-                // ImGui Shell 排布原型（左工具列表 / 中内容 / 右详情，假数据）—— 定观感用
-                case "shell" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellPreviewScreen(entrance).attach();
+                // ImGui Shell（三栏：左导航 / 中内容 / 右详情）。render = 直接定位到渲染设置面板
+                case "shell" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance).attach();
+                case "render" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "render").attach();
                 // 纹理喂入 spike：验证 ImGui 里能不能画 MC 的方块/物品图标
                 case "texspike" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseTextureSpikeScreen(entrance).attach();
                 case "builder" -> new McooBuildwithEaseBuilderSettingsScreen(entrance).attach();
