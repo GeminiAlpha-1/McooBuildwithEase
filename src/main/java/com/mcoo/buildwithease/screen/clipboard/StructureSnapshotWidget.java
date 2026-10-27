@@ -25,15 +25,6 @@ import dev.huskuraft.universal.api.text.Text;
  */
 public final class StructureSnapshotWidget extends AbstractWidget {
 
-    private static final float ROTATE_SPEED = 0.5F;
-    private static final float ZOOM_SPEED = 0.15F;
-    private static final float MIN_ZOOM = 0.2F;
-    private static final float MAX_ZOOM = 8.0F;
-    /** 默认偏航角（度）。 */
-    private static final float DEFAULT_YAW = 45.0F;
-    /** 默认俯仰角（度）。 */
-    private static final float DEFAULT_PITCH = 30.0F;
-
     private Snapshot snapshot;
     /**
      * 要预览的方块列表。
@@ -43,19 +34,8 @@ public final class StructureSnapshotWidget extends AbstractWidget {
     private java.util.List<PreviewBlock> blocks;
     /** 方块列表对应的结构指纹，用来判断是否需要重建。 */
     private int blocksFingerprint;
-    /** 相机：偏航角（度）。 */
-    private float yaw = DEFAULT_YAW;
-    /** 相机：俯仰角（度）。 */
-    private float pitch = DEFAULT_PITCH;
-    /** 相机：缩放（1 = 正好铺满视口）。 */
-    private float zoom = 1.0F;
-    /** 相机：水平平移（逻辑像素）。 */
-    private float panX = 0.0F;
-    /** 相机：垂直平移（逻辑像素）。 */
-    private float panY = 0.0F;
-    /** 朝向修正：绕世界 X/Y/Z 轴各转多少个 90°（0 = 默认朝向）。 */
-    private dev.huskuraft.universal.api.renderer.PreviewOrientation orientation =
-            dev.huskuraft.universal.api.renderer.PreviewOrientation.DEFAULT;
+    /** 视角状态（和 ImGui 剪贴板面板共用同一套模型，见 {@link PreviewCameraModel}）。 */
+    private final PreviewCameraModel cameraModel = new PreviewCameraModel();
     /** 鼠标是否还按着。 */
     private boolean dragging = false;
     /** 上一帧用的渲染器（导出图片时要用）。 */
@@ -81,12 +61,9 @@ public final class StructureSnapshotWidget extends AbstractWidget {
             return;
         }
         // 方块列表只在结构变化时重建（每帧重建会白白分配一堆对象）
-        var fingerprint = fingerprintOf(snapshot);
+        var fingerprint = PreviewSource.fingerprintOf(snapshot);
         if (blocks == null || blocksFingerprint != fingerprint) {
-            blocks = snapshot.blockData().stream()
-                    .filter(blockData -> blockData.blockState() != null)
-                    .map(blockData -> new PreviewBlock(blockData.blockPosition(), blockData.blockState(), blockData.entityTag()))
-                    .toList();
+            blocks = PreviewSource.blocksOf(snapshot);
             blocksFingerprint = fingerprint;
         }
         if (blocks.isEmpty()) {
@@ -106,43 +83,24 @@ public final class StructureSnapshotWidget extends AbstractWidget {
         // 这样方块实体（钟、箱子、陶罐、旗帜…）才能被正确画出来。
         renderer.renderModelPreview(
                 new dev.huskuraft.universal.api.renderer.PreviewRenderRequest(
-                        blocks, new PreviewCamera(yaw, pitch, zoom, panX, panY), orientation),
+                        blocks, cameraModel.camera(), cameraModel.orientation()),
                 getLeft(), getTop(), getWidth(), getHeight());
     }
 
     /**
-     * 预览的视角状态。
+     * 预览的视角状态（实现见 {@link PreviewCameraModel}，和 ImGui 剪贴板面板共用同一份模型）。
      * <p>
      * 界面每次重新初始化都会把控件重建一遍（{@code init → recreate → onCreate}），
      * 控件里的视角参数就跟着丢了 —— 所以视角状态得由外层（剪贴板界面）存着，
      * 重建完再塞回去，不然「转了轴回到上一页发现什么都没变」。
      */
-    public record ViewState(
-            float yaw,
-            float pitch,
-            float zoom,
-            float panX,
-            float panY,
-            dev.huskuraft.universal.api.renderer.PreviewOrientation orientation
-    ) {
-    }
-
-    /** 当前视角状态（外层存下来，重建后恢复）。 */
-    public ViewState viewState() {
-        return new ViewState(yaw, pitch, zoom, panX, panY, orientation);
+    public PreviewCameraModel.ViewState viewState() {
+        return cameraModel.viewState();
     }
 
     /** 恢复视角状态。 */
-    public void setViewState(ViewState state) {
-        if (state == null) {
-            return;
-        }
-        this.yaw = state.yaw();
-        this.pitch = state.pitch();
-        this.zoom = state.zoom();
-        this.panX = state.panX();
-        this.panY = state.panY();
-        this.orientation = state.orientation();
+    public void setViewState(PreviewCameraModel.ViewState state) {
+        cameraModel.setViewState(state);
     }
 
     /**
@@ -152,17 +110,12 @@ public final class StructureSnapshotWidget extends AbstractWidget {
      * @param steps 转多少个 90°（正数按右手定则）
      */
     public void rotateAxis(int axis, int steps) {
-        this.orientation = this.orientation.rotate(axis, steps);
+        cameraModel.rotateAxis(axis, steps);
     }
 
     /** 回到默认视角：偏航 45°、俯仰 30°、缩放 100%、不平移、没有朝向修正。 */
     public void resetView() {
-        this.yaw = DEFAULT_YAW;
-        this.pitch = DEFAULT_PITCH;
-        this.zoom = 1.0F;
-        this.panX = 0.0F;
-        this.panY = 0.0F;
-        this.orientation = dev.huskuraft.universal.api.renderer.PreviewOrientation.DEFAULT;
+        cameraModel.reset();
     }
 
     /**
@@ -184,7 +137,7 @@ public final class StructureSnapshotWidget extends AbstractWidget {
                 + "_" + width + "x" + height + ".png";
         this.renderer.exportModelPreview(
                 new dev.huskuraft.universal.api.renderer.PreviewRenderRequest(
-                        this.blocks, new PreviewCamera(yaw, pitch, zoom, panX, panY), this.orientation),
+                        this.blocks, cameraModel.camera(), cameraModel.orientation()),
                 width, height, directory.resolve(name));
         getEntrance().getClient().getPlayer().sendMessage(com.mcoo.buildwithease.McooBuildwithEase.getSystemMessage(
                 dev.huskuraft.universal.api.text.Text.translate(
@@ -202,24 +155,6 @@ public final class StructureSnapshotWidget extends AbstractWidget {
     public void requestExport(int width, int height) {
         this.exportWidth = width;
         this.exportHeight = height;
-    }
-
-    /**
-     * 结构的指纹：方块数 + 各方块坐标与状态的哈希。
-     * <p>
-     * 用来判断「结构有没有变」——变了才重建网格。
-     * 坐标和状态都参与哈希，所以挪动一格或换一种方块都会触发重建。
-     */
-    private static int fingerprintOf(Snapshot snapshot) {
-        var hash = 17;
-        for (var blockData : snapshot.blockData()) {
-            var position = blockData.blockPosition();
-            hash = hash * 31 + position.x();
-            hash = hash * 31 + position.y();
-            hash = hash * 31 + position.z();
-            hash = hash * 31 + (blockData.blockState() == null ? 0 : blockData.blockState().hashCode());
-        }
-        return hash;
     }
 
     @Override
@@ -246,12 +181,10 @@ public final class StructureSnapshotWidget extends AbstractWidget {
             // 左键：旋转
             // 【方向】模型要跟着鼠标走 —— 往右拖，模型就往右转。
             // 之前这里是减号，方向正好相反（往右拖模型往左转）。
-            yaw += (float) deltaX * ROTATE_SPEED;
-            pitch = Math.max(-90.0F, Math.min(90.0F, pitch + (float) deltaY * ROTATE_SPEED));
+            cameraModel.rotateByDrag(deltaX, deltaY);
         } else if (button == 1) {
             // 右键：平移
-            panX += (float) deltaX;
-            panY += (float) deltaY;
+            cameraModel.panByDrag(deltaX, deltaY);
         }
         return true;
     }
@@ -262,7 +195,7 @@ public final class StructureSnapshotWidget extends AbstractWidget {
             return false;
         }
         // 滚轮向上（amountY > 0）放大，向下缩小 —— 与常见的 3D 视图操作习惯一致。
-        zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * (float) (1.0D + amountY * ZOOM_SPEED)));
+        cameraModel.zoomByScroll(amountY);
         return true;
     }
 

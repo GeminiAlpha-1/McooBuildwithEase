@@ -32,9 +32,48 @@ public final class MinecraftImGuiProxyScreen extends MinecraftProxyScreen implem
         ((ImGuiScreen) getProxy()).renderImGui();
     }
 
-    /** 界面内容由 ImGui 画，vanilla 这条路不画任何东西。 */
+    /**
+     * 界面内容由 ImGui 画，vanilla 这条路不画控件 ——
+     * 但<b>三维预览</b>必须走这里：ImGui 只知道 2D，方块实体（箱子 / 钟 / 旗帜…）
+     * 的形状只有 MC 的 3D 管线才画得出来。
+     *
+     * <p>流程：界面给出「要预览什么 + 占多大矩形」→ 我们把它作为画中画（PiP）状态提交给
+     * {@code GuiRenderState} → 原版 {@code GuiRenderer} 为该矩形建离屏纹理，
+     * 用 3D 管线把结构画进去，并把纹理 view 发布到 {@code PreviewTexture} →
+     * 界面在 ImGui 里按同一个矩形采样那张纹理。
+     *
+     * <p>⚠️ 原版会把纹理**贴回**这个矩形（那是它自己的 PiP 流程）。
+     * ImGui 面板随后绘制自己的底色 + 图像，所以玩家不会看到两层叠加 ——
+     * 代价是那一次贴图白做，但换来的是完全不碰原版渲染管线。
+     */
     @Override
     public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        var screen = (ImGuiScreen) getProxy();
+        var request = screen.nativePreview();
+        var bounds = screen.nativePreviewBounds();
+        if (request == null || request.blocks() == null || request.blocks().isEmpty() || bounds == null || bounds.length < 4) {
+            return;
+        }
+        int x = bounds[0];
+        int y = bounds[1];
+        int width = bounds[2];
+        int height = bounds[3];
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        var minecraft = net.minecraft.client.Minecraft.getInstance();
+        var guiRenderState = minecraft.gameRenderer.gameRenderState().guiRenderState;
+        var scissor = new net.minecraft.client.gui.navigation.ScreenRectangle(x, y, width, height);
+        guiRenderState.addPicturesInPictureState(
+                new dev.huskuraft.universal.vanilla.renderer.preview.PreviewRenderState(
+                        request.blocks(),
+                        request.camera(),
+                        request.orientation(),
+                        x, y, x + width, y + height,
+                        scissor,
+                        net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState.getBounds(
+                                x, y, x + width, y + height, scissor)));
     }
 
 }

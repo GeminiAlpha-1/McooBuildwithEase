@@ -32,3 +32,7 @@ accessible	method	net/minecraft/client/renderer/RenderPipelines	register	(Lcom/m
 # RenderPipelines#ENTITY_SNIPPET 是 private static final —— 照抄 vanilla 的配方，
 # 用同一个 snippet 建管线，bind group / 雾 / 光照才和主通道一致
 accessible	field	net/minecraft/client/renderer/RenderPipelines	ENTITY_SNIPPET	Lcom/mojang/blaze3d/pipeline/RenderPipeline$Snippet;
+
+# PictureInPictureRenderer#textureView 是 private
+# 把 PiP 的离屏纹理交给 ImGui 采样要用它（剪贴板 3D 预览搬进 ImGui Shell 时用，见 AGENTS.md §6.9.7）
+accessible	field	net/minecraft/client/gui/render/pip/PictureInPictureRenderer	textureView	Lcom/mojang/blaze3d/textures/GpuTextureView;

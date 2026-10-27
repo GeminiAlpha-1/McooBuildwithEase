@@ -5,11 +5,13 @@ import java.util.List;
 
 import com.mcoo.buildwithease.McooBuildwithEaseClient;
 import com.mcoo.buildwithease.screen.common.McooBuildwithEaseScreen;
+import com.mcoo.buildwithease.screen.imgui.panel.ClipboardPanel;
 import com.mcoo.buildwithease.screen.imgui.panel.ImGuiPanel;
 import com.mcoo.buildwithease.screen.imgui.panel.RenderSettingsPanel;
 import com.mcoo.buildwithease.screen.imgui.widget.ImGuiShell;
 import com.mcoo.buildwithease.screen.imgui.widget.ImGuiWidgets;
 import dev.huskuraft.universal.api.gui.ImGuiScreen;
+import dev.huskuraft.universal.api.renderer.PreviewRenderRequest;
 import dev.huskuraft.universal.api.text.Text;
 
 /**
@@ -45,8 +47,25 @@ public class McooBuildwithEaseShellScreen extends McooBuildwithEaseScreen implem
     /** 已注册的面板。新功能在这里加一行。 */
     private List<ImGuiPanel> buildPanels() {
         List<ImGuiPanel> list = new ArrayList<>();
+        list.add(new ClipboardPanel(getEntrance()));
         list.add(new RenderSettingsPanel(getEntrance()));
         return list;
+    }
+
+    // ------------------------------------------------------------------
+    // 原生渲染（三维预览）：把当前面板的请求转给平台层
+    // ------------------------------------------------------------------
+
+    @Override
+    public PreviewRenderRequest nativePreview() {
+        var panel = selectedPanel();
+        return panel == null ? null : panel.nativePreview();
+    }
+
+    @Override
+    public int[] nativePreviewBounds() {
+        var panel = selectedPanel();
+        return panel == null ? null : panel.nativePreviewBounds();
     }
 
     private static int indexOf(List<ImGuiPanel> panels, String id) {

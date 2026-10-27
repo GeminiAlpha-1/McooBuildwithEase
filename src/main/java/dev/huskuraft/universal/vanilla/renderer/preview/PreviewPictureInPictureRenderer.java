@@ -70,5 +70,11 @@ public class PreviewPictureInPictureRenderer extends PictureInPictureRenderer<Pr
         // 这里不再自己缩放（叠加两次就会撑出视口被裁掉）。
         scene.render(blocks, state.camera(), state.orientation(),
                 Math.max(0.0001F, state.scale()), poseStack, collector);
+
+        // 把基类那张离屏纹理发布出去，供 ImGui 界面采样（见 PreviewTexture 的注释）。
+        // textureView 是 PictureInPictureRenderer 的 private 字段，靠 class tweaker 打开
+        // （mcoo_build_with_ease.classtweaker 里的 accessible field 条目）。
+        PreviewTexture.publish(this.textureView,
+                state.x1() - state.x0(), state.y1() - state.y0());
     }
 }

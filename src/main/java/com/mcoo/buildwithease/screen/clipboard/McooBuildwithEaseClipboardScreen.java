@@ -35,7 +35,7 @@ public class McooBuildwithEaseClipboardScreen extends AbstractPanelScreen {
      * 界面重新初始化时控件会被重建，控件里的视角参数就没了 ——
      * 这里存一份，重建完再塞回去。
      */
-    private StructureSnapshotWidget.ViewState viewState;
+    private PreviewCameraModel.ViewState viewState;
 
     public McooBuildwithEaseClipboardScreen(Entrance entrance) {
         super(entrance, Text.translate("mcoo_build_with_ease.clipboard.edit.title"), PANEL_WIDTH_60, PANEL_HEIGHT_FULL);

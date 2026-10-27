@@ -61,8 +61,7 @@
   "mcoo_build_with_ease.action.passive_mode_disabled": "已禁用",
   "mcoo_build_with_ease.action.passive_mode_disabled.tooltip": "随时开始建造。",
   "mcoo_build_with_ease.action.passive_mode_enabled": "已启用",
-  "mcoo_build_with_ease.action.passive_mode_enabled.tooltip": "只有在按住被动建造键时才开始建造。
-请确保您已在按键绑定设置中分配了热键。",
+  "mcoo_build_with_ease.action.passive_mode_enabled.tooltip": "只有在按住被动建造键时才开始建造。\n请确保您已在按键绑定设置中分配了热键。",
   "mcoo_build_with_ease.action.pattern": "图案",
   "mcoo_build_with_ease.action.pattern_disabled": "已禁用",
   "mcoo_build_with_ease.action.pattern_disabled.tooltip": "通过组合不同的转换器来创建复杂的形状。",
@@ -137,9 +136,7 @@
   "mcoo_build_with_ease.builder_settings.passive_mode": "被动模式",
   "mcoo_build_with_ease.builder_settings.reserved_tool_durability": "保留工具耐久度",
   "mcoo_build_with_ease.builder_settings.title": "建造设置",
-  "mcoo_build_with_ease.builder_settings.tooltip": "这些设置调整建造行为和工具消耗规则。仅客户端可用。
-
-这些设置保存在名为%s的配置目录中的文件中。",
+  "mcoo_build_with_ease.builder_settings.tooltip": "这些设置调整建造行为和工具消耗规则。仅客户端可用。\n\n这些设置保存在名为%s的配置目录中的文件中。",
   "mcoo_build_with_ease.building.radial.title": "McooBuildwithEase",
   "mcoo_build_with_ease.building.settings.title": "建造模式设置",
   "mcoo_build_with_ease.building.title": "McooBuildwithEase",
@@ -223,16 +220,12 @@
   "mcoo_build_with_ease.general_settings.max_reach_distance": "最大触及距离",
   "mcoo_build_with_ease.general_settings.max_structure_copy_paste_volume": "最大复制/粘贴体积",
   "mcoo_build_with_ease.general_settings.title": "通用设置",
-  "mcoo_build_with_ease.general_settings.tooltip": "这些设置为玩家在建造过程中添加了限制规则。只有服务器操作员或单人游戏所有者可以使用。
-
-这些设置保存在名为%s的配置目录中的文件中。",
+  "mcoo_build_with_ease.general_settings.tooltip": "这些设置为玩家在建造过程中添加了限制规则。只有服务器操作员或单人游戏所有者可以使用。\n\n这些设置保存在名为%s的配置目录中的文件中。",
   "mcoo_build_with_ease.general_settings.use_commands": "使用指令",
   "mcoo_build_with_ease.general_settings.use_proper_tools": "使用正确工具",
   "mcoo_build_with_ease.general_settings.whitelisted_items": "白名单物品",
   "mcoo_build_with_ease.global_general_settings.title": "全局通用设置",
-  "mcoo_build_with_ease.global_general_settings.tooltip": "这些设置为所有玩家添加了全局限制规则。只有服务器操作员或单人游戏所有者可以使用。
-
-这些设置保存在名为%s的配置目录中的文件中。",
+  "mcoo_build_with_ease.global_general_settings.tooltip": "这些设置为所有玩家添加了全局限制规则。只有服务器操作员或单人游戏所有者可以使用。\n\n这些设置保存在名为%s的配置目录中的文件中。",
   "mcoo_build_with_ease.history.nothing_to_redo": "无可重做操作",
   "mcoo_build_with_ease.history.nothing_to_undo": "无可撤销操作",
   "mcoo_build_with_ease.history.redo_success": "重做建造",
@@ -380,13 +373,9 @@
   "mcoo_build_with_ease.pattern_settings.item_randomizer_presets": "物品随机器预设",
   "mcoo_build_with_ease.pattern_settings.presets": "%s 个预设",
   "mcoo_build_with_ease.pattern_settings.title": "图案设置",
-  "mcoo_build_with_ease.pattern_settings.tooltip": "这些设置管理建造图案和转换器预设。仅客户端可用。
-
-这些设置保存在名为%s的配置目录中的文件中。",
+  "mcoo_build_with_ease.pattern_settings.tooltip": "这些设置管理建造图案和转换器预设。仅客户端可用。\n\n这些设置保存在名为%s的配置目录中的文件中。",
   "mcoo_build_with_ease.player_general_settings.title": "玩家通用设置",
-  "mcoo_build_with_ease.player_general_settings.tooltip": "这些设置为特定玩家添加了覆盖全局设置的限制规则。只有服务器操作员或单人游戏所有者可以使用。
-
-这些设置保存在名为%s的配置目录中的文件中。",
+  "mcoo_build_with_ease.player_general_settings.tooltip": "这些设置为特定玩家添加了覆盖全局设置的限制规则。只有服务器操作员或单人游戏所有者可以使用。\n\n这些设置保存在名为%s的配置目录中的文件中。",
   "mcoo_build_with_ease.position": "位置 %s",
   "mcoo_build_with_ease.position.absolute": "绝对",
   "mcoo_build_with_ease.position.disabled": "关闭",
@@ -484,9 +473,7 @@
   "mcoo_build_with_ease.render_settings.show_other_players_build": "显示其他玩家建造",
   "mcoo_build_with_ease.render_settings.show_other_players_build_tooltips": "显示其他玩家建造提示",
   "mcoo_build_with_ease.render_settings.title": "渲染设置",
-  "mcoo_build_with_ease.render_settings.tooltip": "这些设置调整建造提示和方块预览的渲染。仅客户端可用。
-
-这些设置保存在名为%s的配置目录中的文件中。",
+  "mcoo_build_with_ease.render_settings.tooltip": "这些设置调整建造提示和方块预览的渲染。仅客户端可用。\n\n这些设置保存在名为%s的配置目录中的文件中。",
   "mcoo_build_with_ease.session_status.message.client_mod_missing": "§c客户端未找到此模组。§r",
   "mcoo_build_with_ease.session_status.message.mod_missing": "§c服务器和客户端均未找到此模组，这不可能发生。",
   "mcoo_build_with_ease.session_status.message.protocol_not_match": "§c模组协议版本不匹配！服务器: §6[%s]§c，客户端: §6[%s]§c。§r",
@@ -671,5 +658,10 @@
   "mcoo_build_with_ease.shell.preview_hint": "建造预览区域",
   "mcoo_build_with_ease.shell.section_build": "建造",
   "mcoo_build_with_ease.shell.section_clipboard": "剪贴板",
-  "mcoo_build_with_ease.shell.section_settings": "设置"
+  "mcoo_build_with_ease.shell.section_settings": "设置",
+  "mcoo_build_with_ease.clipboard.rotate_y": "绕 Y 轴旋转 90°",
+  "mcoo_build_with_ease.clipboard.export_png": "导出 PNG（1024）",
+  "mcoo_build_with_ease.clipboard.empty": "剪贴板是空的（先复制一个结构）",
+  "mcoo_build_with_ease.clipboard.hint": "左键拖动旋转 · 右键拖动平移 · 滚轮缩放",
+  "mcoo_build_with_ease.clipboard.rendering": "正在渲染预览……"
 }

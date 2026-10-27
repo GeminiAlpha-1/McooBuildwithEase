@@ -114,10 +114,37 @@ public final class ImGuiShell {
         // Borders：一像素描边 —— 就是 Axiom 那种「面板之间有条缝」的观感
         ImGui.beginChild(id, width, height, ImGuiChildFlags.Borders);
         try {
+            // 中间栏要画原生 3D 预览（平台的画中画渲染需要**绝对屏幕坐标**），
+            // 所以在进入 body 之前把这一栏的屏幕矩形记下来。
+            if (CENTER_ID.equals(id)) {
+                var origin = ImGui.getCursorScreenPos();
+                centerX = Math.round(origin.x);
+                centerY = Math.round(origin.y);
+                centerWidth = Math.round(width);
+                centerHeight = Math.round(height);
+            }
             body.run();
         } finally {
             ImGui.endChild();
         }
+    }
+
+    // 中间栏最近一次的屏幕矩形（GUI 逻辑像素）。只给「需要原生渲染的面板」用。
+    private static int centerX;
+    private static int centerY;
+    private static int centerWidth;
+    private static int centerHeight;
+
+    /**
+     * 中间栏最近一帧的屏幕矩形，{@code {x, y, width, height}}（GUI 逻辑像素）。
+     * <p>
+     * 给需要 MC 原生渲染的面板用（例如剪贴板的 3D 预览）——
+     * 平台层的画中画渲染按绝对坐标工作，ImGui 那边只有相对光标位置。
+     * <p>
+     * ⚠️ 这是<b>上一帧</b>布局的结果（本帧还没画完），窗口尺寸不变时完全够用。
+     */
+    public static int[] centerRect() {
+        return new int[]{centerX, centerY, centerWidth, centerHeight};
     }
 
     // ------------------------------------------------------------------

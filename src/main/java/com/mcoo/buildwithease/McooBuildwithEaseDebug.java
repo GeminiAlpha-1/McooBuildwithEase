@@ -49,6 +49,11 @@ final class McooBuildwithEaseDebug {
                 if (builder.getContext(player).clipboard().isEmpty()) {
                     return;
                 }
+                if ("clipimgui".equals(screen)) {
+                    new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "clipboard").attach();
+                    opened = true;
+                    return;
+                }
                 var clipboardScreen = new McooBuildwithEaseClipboardScreen(entrance);
                 clipboardScreen.attach();
                 // 「导出图片」场景：等预览先渲染几帧（渲染器这时才拿到），再自动导一次
@@ -72,6 +77,7 @@ final class McooBuildwithEaseDebug {
                 // ImGui Shell（三栏：左导航 / 中内容 / 右详情）。render = 直接定位到渲染设置面板
                 case "shell" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance).attach();
                 case "render" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "render").attach();
+                case "clip" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "clipboard").attach();
                 // 纹理喂入 spike：验证 ImGui 里能不能画 MC 的方块/物品图标
                 case "texspike" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseTextureSpikeScreen(entrance).attach();
                 case "builder" -> new McooBuildwithEaseBuilderSettingsScreen(entrance).attach();
@@ -113,7 +119,9 @@ final class McooBuildwithEaseDebug {
             McooBuildwithEaseClient entrance, String screen) {
         var blocks = new java.util.ArrayList<com.mcoo.buildwithease.building.clipboard.BlockData>();
         switch (screen) {
-            case "clipboard-full" -> {
+            // ImGui Shell 的剪贴板面板：用和 clipboard-full 同一份假数据，
+            // 才能验证「3D 预览能不能在 ImGui 里转」
+            case "clipimgui", "clipboard-full" -> {
                 // 故意用好几种不同的方块：一来能看出贴图对不对，二来能看出面与面的明暗。
                 var kinds = new dev.huskuraft.universal.api.core.Item[]{
                         dev.huskuraft.universal.api.core.Items.OAK_PLANKS.item(),

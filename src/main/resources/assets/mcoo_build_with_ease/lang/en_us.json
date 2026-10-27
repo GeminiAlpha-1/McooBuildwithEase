@@ -61,8 +61,7 @@
   "mcoo_build_with_ease.action.passive_mode_disabled": "Disabled",
   "mcoo_build_with_ease.action.passive_mode_disabled.tooltip": "Start to build anytime.",
   "mcoo_build_with_ease.action.passive_mode_enabled": "Enabled",
-  "mcoo_build_with_ease.action.passive_mode_enabled.tooltip": "Start to build only when hold the passive build key. 
-Make sure you have assigned the hotkey in key binds settings.",
+  "mcoo_build_with_ease.action.passive_mode_enabled.tooltip": "Start to build only when hold the passive build key. \nMake sure you have assigned the hotkey in key binds settings.",
   "mcoo_build_with_ease.action.pattern": "Build Pattern",
   "mcoo_build_with_ease.action.pattern_disabled": "Disabled",
   "mcoo_build_with_ease.action.pattern_disabled.tooltip": "Create complex shapes by combining different transformers.",
@@ -137,9 +136,7 @@ Make sure you have assigned the hotkey in key binds settings.",
   "mcoo_build_with_ease.builder_settings.passive_mode": "Passive Mode",
   "mcoo_build_with_ease.builder_settings.reserved_tool_durability": "Reserved Tool Durability",
   "mcoo_build_with_ease.builder_settings.title": "Builder Settings",
-  "mcoo_build_with_ease.builder_settings.tooltip": "These settings adjust build behaviors and tool consumption rules. They are available for client side only. 
-
-These settings are saved in file named %s in the config directory.",
+  "mcoo_build_with_ease.builder_settings.tooltip": "These settings adjust build behaviors and tool consumption rules. They are available for client side only. \n\nThese settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.building.radial.title": "McooBuildwithEase",
   "mcoo_build_with_ease.building.settings.title": "Build Mode Settings",
   "mcoo_build_with_ease.building.title": "McooBuildwithEase",
@@ -223,16 +220,12 @@ These settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.general_settings.max_reach_distance": "Max Reach Distance",
   "mcoo_build_with_ease.general_settings.max_structure_copy_paste_volume": "Max Structure Copy/Paste Volume",
   "mcoo_build_with_ease.general_settings.title": "General Settings",
-  "mcoo_build_with_ease.general_settings.tooltip": "These settings add restrictive rules for players during building. They are only available to server operators or single-player game owners. 
-
-These settings are saved in file named %s in the config directory.",
+  "mcoo_build_with_ease.general_settings.tooltip": "These settings add restrictive rules for players during building. They are only available to server operators or single-player game owners. \n\nThese settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.general_settings.use_commands": "Use Commands",
   "mcoo_build_with_ease.general_settings.use_proper_tools": "Use Proper Tools",
   "mcoo_build_with_ease.general_settings.whitelisted_items": "Whitelisted Items",
   "mcoo_build_with_ease.global_general_settings.title": "Global General Settings",
-  "mcoo_build_with_ease.global_general_settings.tooltip": "These settings add global restrictive rules for all players. They are only available to server operators or single-player game owners. 
-
-These settings are saved in file named %s in the config directory.",
+  "mcoo_build_with_ease.global_general_settings.tooltip": "These settings add global restrictive rules for all players. They are only available to server operators or single-player game owners. \n\nThese settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.history.nothing_to_redo": "Nothing to Redo",
   "mcoo_build_with_ease.history.nothing_to_undo": "Nothing to Undo",
   "mcoo_build_with_ease.history.redo_success": "Redo Build",
@@ -380,13 +373,9 @@ These settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.pattern_settings.item_randomizer_presets": "Item Randomizer Presets",
   "mcoo_build_with_ease.pattern_settings.presets": "%s Preset(s)",
   "mcoo_build_with_ease.pattern_settings.title": "Pattern Settings",
-  "mcoo_build_with_ease.pattern_settings.tooltip": "These settings manage the build patterns and transformer presets. They are available for client side only. 
-
-These settings are saved in file named %s in the config directory.",
+  "mcoo_build_with_ease.pattern_settings.tooltip": "These settings manage the build patterns and transformer presets. They are available for client side only. \n\nThese settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.player_general_settings.title": "Player General Settings",
-  "mcoo_build_with_ease.player_general_settings.tooltip": "These settings add player specific restrictive rules that overrides the global one. They are only available to server operators or single-player game owners. 
-
-These settings are saved in file named %s in the config directory.",
+  "mcoo_build_with_ease.player_general_settings.tooltip": "These settings add player specific restrictive rules that overrides the global one. They are only available to server operators or single-player game owners. \n\nThese settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.position": "Position %s",
   "mcoo_build_with_ease.position.absolute": "Absolute",
   "mcoo_build_with_ease.position.disabled": "Disabled",
@@ -484,9 +473,7 @@ These settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.render_settings.show_other_players_build": "Show Other Players Build",
   "mcoo_build_with_ease.render_settings.show_other_players_build_tooltips": "Show Other Players Build Tooltips",
   "mcoo_build_with_ease.render_settings.title": "Render Settings",
-  "mcoo_build_with_ease.render_settings.tooltip": "These settings adjust build tooltips and blocks preview rendering. They are available for client side only. 
-
-These settings are saved in file named %s in the config directory.",
+  "mcoo_build_with_ease.render_settings.tooltip": "These settings adjust build tooltips and blocks preview rendering. They are available for client side only. \n\nThese settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.session_status.message.client_mod_missing": "§cMod not found on client side.§r",
   "mcoo_build_with_ease.session_status.message.mod_missing": "§cMod not found on server and client, it cannot happen.",
   "mcoo_build_with_ease.session_status.message.protocol_not_match": "§cMod protocol version not match! Server: §6[%s]§c, Client: §6[%s]§c.§r",
@@ -671,5 +658,10 @@ These settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.shell.preview_hint": "Build preview area",
   "mcoo_build_with_ease.shell.section_build": "Build",
   "mcoo_build_with_ease.shell.section_clipboard": "Clipboard",
-  "mcoo_build_with_ease.shell.section_settings": "Settings"
+  "mcoo_build_with_ease.shell.section_settings": "Settings",
+  "mcoo_build_with_ease.clipboard.rotate_y": "Rotate 90° around Y",
+  "mcoo_build_with_ease.clipboard.export_png": "Export PNG (1024)",
+  "mcoo_build_with_ease.clipboard.empty": "Clipboard is empty (copy a structure first)",
+  "mcoo_build_with_ease.clipboard.hint": "Drag to rotate · Right-drag to pan · Scroll to zoom",
+  "mcoo_build_with_ease.clipboard.rendering": "Rendering preview…"
 }

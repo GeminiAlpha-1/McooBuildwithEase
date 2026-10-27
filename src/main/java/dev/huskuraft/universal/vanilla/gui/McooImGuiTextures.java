@@ -72,6 +72,23 @@ public final class McooImGuiTextures {
     }
 
     /**
+     * 结构预览（三维）这张离屏纹理的 ImGui 纹理 id。
+     *
+     * <p>纹理来自平台的画中画（PiP）渲染：界面通过 {@code ImGuiScreen#nativePreview()}
+     * 告诉平台「要预览什么」，平台把结构渲染进离屏纹理，并把 view 发布到 {@link PreviewTexture}。
+     * 这里只负责把它换成 ImGui 能用的 id。
+     *
+     * @return 纹理 id；{@code 0} = 还没渲染过（第一帧常见）
+     */
+    public static long previewTextureId() {
+        var view = dev.huskuraft.universal.vanilla.renderer.preview.PreviewTexture.view();
+        if (view == null) {
+            return 0L;
+        }
+        return TextureBindings.INSTANCE.textureId(view);
+    }
+
+    /**
      * 取方块图集。
      * <p>
      * ⚠️ **不要用 `Minecraft#getAtlasManager().getAtlasOrThrow(TextureAtlas.LOCATION_BLOCKS)`** ——

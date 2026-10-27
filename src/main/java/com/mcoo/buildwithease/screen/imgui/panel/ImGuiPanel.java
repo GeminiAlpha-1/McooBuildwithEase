@@ -31,4 +31,25 @@ public interface ImGuiPanel {
     /** 右栏内容（当前选中对象的详情）。 */
     void renderDetails();
 
+    /**
+     * 本帧需要 <b>MC 原生渲染</b>的三维预览（结构预览这类）。
+     * <p>
+     * ImGui 只会画 2D，方块实体（箱子 / 钟 / 旗帜…）只有 MC 的 3D 管线画得出来。
+     * 返回非 null 时，平台会把结构渲染进离屏纹理，面板再用
+     * {@code McooImGuiTextures.previewTextureId()} 把它画出来。
+     *
+     * @return {@code null} = 这个面板不需要原生预览
+     */
+    default dev.huskuraft.universal.api.renderer.PreviewRenderRequest nativePreview() {
+        return null;
+    }
+
+    /**
+     * 原生预览占用的屏幕矩形 {@code {x, y, width, height}}（GUI 逻辑像素）。
+     * 只有 {@link #nativePreview()} 返回非 null 时才有意义。
+     */
+    default int[] nativePreviewBounds() {
+        return null;
+    }
+
 }

@@ -1,5 +1,5 @@
 ﻿# GUI 视觉验证：起服一次 → 逐个界面：起客户端(自动开界面) → 截图 → 只停客户端
-param([string]$Screens = 'settings,radial', [string]$Click = '', [string]$Keys = '')
+param([string]$Screens = 'settings,radial', [string]$Click = '', [string]$Keys = '', [string]$Drag = '')
 $ErrorActionPreference = 'Stop'
 $proj = Split-Path -Parent $PSScriptRoot
 $ts = if ($env:MCOO_TEST_SERVER) { $env:MCOO_TEST_SERVER } else {
@@ -106,6 +106,45 @@ function Invoke-Click {
     Start-Sleep -Milliseconds 120
     [Win2]::mouse_event([Win2]::LEFTUP, 0, 0, 0, [IntPtr]::Zero)
     Start-Sleep -Seconds 3
+}
+
+# 按住左键拖一段路（用来验证「拖动旋转 / 拖动滑条」这类交互）
+# 参数格式同 -Click："dx,dy;dx,dy;..."，相对屏幕中心的逻辑像素，按顺序走过去。
+function Invoke-Drag {
+    param([string]$Path, $Proc)
+    $proc = $Proc
+    if (-not $proc) { $proc = Get-ClientProc }
+    if (-not $proc) { Write-Host "  找不到开发客户端窗口，跳过拖动"; return }
+    if (-not (Focus-McWindow $proc)) { Write-Host "  警告：MC 窗口没拿到前台焦点，拖动可能丢到别的窗口" }
+    Start-Sleep -Seconds 1
+    $client = New-Object Win2+RECT
+    [Win2]::GetClientRect($proc.MainWindowHandle, [ref]$client) | Out-Null
+    $origin = New-Object Win2+POINT
+    $origin.X = 0
+    $origin.Y = 0
+    [Win2]::ClientToScreen($proc.MainWindowHandle, [ref]$origin) | Out-Null
+    $cw = $client.Right - $client.Left
+    $ch = $client.Bottom - $client.Top
+    $guiScale = [Math]::Max(1, [Math]::Min([Math]::Floor($cw / 320), [Math]::Floor($ch / 240)))
+
+    $points = $Path.Split(';') | Where-Object { $_.Trim() -ne '' }
+    $first = $true
+    foreach ($point in $points) {
+        $parts = $point.Split(',')
+        if ($parts.Count -lt 2) { continue }
+        $px = $origin.X + [int](($cw / 2 + [int]$parts[0] * $guiScale))
+        $py = $origin.Y + [int](($ch / 2 + [int]$parts[1] * $guiScale))
+        [Win2]::SetCursorPos($px, $py) | Out-Null
+        if ($first) {
+            Start-Sleep -Milliseconds 400
+            [Win2]::mouse_event([Win2]::LEFTDOWN, 0, 0, 0, [IntPtr]::Zero)
+            $first = $false
+        }
+        # 每个点之间留点时间，让界面按帧收得到「鼠标在移动」
+        Start-Sleep -Milliseconds 120
+    }
+    [Win2]::mouse_event([Win2]::LEFTUP, 0, 0, 0, [IntPtr]::Zero)
+    Start-Sleep -Seconds 2
 }
 
 # 给 MC 窗口发按键（SendKeys 语法：^=Ctrl, {ENTER}=回车 …）
@@ -231,6 +270,11 @@ foreach ($s in ($Screens -split ',')) {
             $parts = $one -split ','
             Invoke-Click -Dx ([int]$parts[0]) -Dy ([int]$parts[1]) -Proc $clientProc
         }
+    }
+
+    if ($Drag -ne '') {
+        # -Drag "dx,dy;dx,dy;..."：按住左键沿这些点走过去（验证拖动交互）
+        Invoke-Drag -Path $Drag -Proc $clientProc
     }
 
     if ($Keys -ne '') {
