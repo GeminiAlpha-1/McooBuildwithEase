@@ -665,5 +665,11 @@
   "mcoo_build_with_ease.transformer.template_select.search_hint": "搜索变换",
   "mcoo_build_with_ease.transformer.template_select.title": "选择变换模板",
   "mcoo_build_with_ease.transformer.template_select.use_template": "使用模板",
-  "mcoo_build_with_ease.transformer_presets.title": "变换器预设"
+  "mcoo_build_with_ease.transformer_presets.title": "变换器预设",
+  "mcoo_build_with_ease.shell.tools": "工具",
+  "mcoo_build_with_ease.shell.details": "工具详情",
+  "mcoo_build_with_ease.shell.preview_hint": "建造预览区域",
+  "mcoo_build_with_ease.shell.section_build": "建造",
+  "mcoo_build_with_ease.shell.section_clipboard": "剪贴板",
+  "mcoo_build_with_ease.shell.section_settings": "设置"
 }

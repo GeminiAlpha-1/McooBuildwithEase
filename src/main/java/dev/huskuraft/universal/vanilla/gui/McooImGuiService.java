@@ -52,6 +52,9 @@ public final class McooImGuiService extends DefaultImGui {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(McooImGuiService.class);
 
+    /** ImGui 的 ini 文件名 / 服务 id。 */
+    private static final String ID = "mcoo_build_with_ease";
+
     /** 字体资源路径（跟着本模组的 resources 走，不依赖资源包重载时机）。 */
     private static final String FONT_PATH = "/assets/mcoo_build_with_ease/fonts/McooUI-SC-Medium.ttf";
 
@@ -85,7 +88,7 @@ public final class McooImGuiService extends DefaultImGui {
 
     public McooImGuiService() {
         // ini 文件名：ImGui 会把它存在 MC 的工作目录（run/ 或 .minecraft/）
-        super("mcoo_build_with_ease");
+        super(ID);
     }
 
     /**
@@ -98,14 +101,27 @@ public final class McooImGuiService extends DefaultImGui {
      */
     @Override
     public void configure(ImGuiIO io) {
+        // ⚠️ 这里<b>不调</b> super.configure()，而是照抄宿主那四步自己实现。
+        //
+        // 宿主 DefaultImGui 的 configure() 字节码是（26.2-1.2.0 实测）：
+        //     io.getFonts().addFontDefault();
+        //     io.getFonts().build();
+        //     io.setIniFilename(id == null ? null : id + ".ini");
+        //     io.setConfigFlags(128);
+        //
+        // 为什么不复用它：它<b>无条件</b> addFontDefault() + build()。
+        // 我们已经在前面装好字体并 build 过一次，它这一遍会把 ProggyClean 也塞进同一个图集、
+        // 重新打包一次 —— 实测结果是<b>部分汉字被挤掉</b>（图集是 2048×2048，容不下两份字体），
+        // 表现是"大部分中文正常、少数几个字变成方块"，极难定位。
+        // 自己实现就只有一次 build，字体与图集一一对应。
         try {
             installFont(io);
         } catch (Throwable error) {
-            // 字体装不上不能让游戏崩：退回宿主的默认行为（英文照常，中文显示为方块）
-            LOGGER.error("[imgui] 装载界面字体失败，退回默认字体（中文将无法显示）", error);
+            LOGGER.error("[imgui] 装载界面字体失败，退回宿主默认字体（中文将无法显示）", error);
+            // 兜底：字体装不上时至少让英文界面能用，行为和宿主一致
+            io.getFonts().addFontDefault();
+            io.getFonts().build();
         }
-
-        super.configure(io);
 
         try {
             if (defaultFontRef != null) {
@@ -116,9 +132,11 @@ public final class McooImGuiService extends DefaultImGui {
             LOGGER.error("[imgui] 指定默认字体失败", error);
         }
 
+        // 以下两步与宿主保持完全一致（ini 文件落在游戏工作目录，configFlags = 128 = NoKeyboard 相关位）
+        io.setIniFilename(ID + ".ini");
+        io.setConfigFlags(128);
+
         try {
-            // 主题放在 super 之后：宿主的 configure 只管字体与 ini/configFlags，不碰样式，
-            // 但顺序上让它先跑完更保险（将来宿主版本若加样式默认值，我们的仍然生效）。
             McooImGuiTheme.apply(uiScale());
         } catch (Throwable error) {
             LOGGER.error("[imgui] 套用界面主题失败，将使用 ImGui 默认样式", error);
@@ -176,7 +194,6 @@ public final class McooImGuiService extends DefaultImGui {
 
         // 立刻烘一次图集：GlyphRanges 在 native 侧是**指针**，越晚 build 越可能指到失效内存。
         // 在这里 build，范围数组与 config 都还是热的（见字段注释里的踩坑记录）。
-        // 宿主随后还会在 super.configure() 里 addFontDefault + build，此时图集已构建完成，那一步是空转。
         boolean built = atlas.build();
         var width = new imgui.type.ImInt();
         var height = new imgui.type.ImInt();
@@ -185,6 +202,22 @@ public final class McooImGuiService extends DefaultImGui {
         // 只有 512×512 就说明汉字范围没进去（范围被静默丢弃的经典症状），2048×2048 才是正常的。
         LOGGER.info("[imgui] 界面字体：McooUI SC {}px，字形图集 {}x{}（build={}）",
                 px, width.get(), height.get(), built);
+
+        // 字形抽查：CJK 走 fallback（宽度 = '?' 的宽度）说明这个字没进图集。
+        // 排查"个别汉字变方块"时看这一行就够了。
+        if (LOGGER.isDebugEnabled()) {
+            probeGlyph(defaultFontRef, px, "造");
+            probeGlyph(defaultFontRef, px, "预");
+            probeGlyph(defaultFontRef, px, "通");
+            probeGlyph(defaultFontRef, px, "齿");
+        }
+    }
+
+    /** 打一个字符的渲染宽度，用来判断它是不是退化成了 fallback 字形。 */
+    private static void probeGlyph(ImFont font, int px, String text) {
+        float cell = font.calcTextSizeAX(px, Float.MAX_VALUE, 0f, "中");
+        float actual = font.calcTextSizeAX(px, Float.MAX_VALUE, 0f, text);
+        LOGGER.debug("[imgui] 字形抽查 {} 宽度={}（汉字基准={}）", text, actual, cell);
     }
 
     /**

@@ -665,5 +665,11 @@ These settings are saved in file named %s in the config directory.",
   "mcoo_build_with_ease.transformer.template_select.search_hint": "Search Transformer",
   "mcoo_build_with_ease.transformer.template_select.title": "Select Transformer Template",
   "mcoo_build_with_ease.transformer.template_select.use_template": "Use Template",
-  "mcoo_build_with_ease.transformer_presets.title": "Transformer Presets"
+  "mcoo_build_with_ease.transformer_presets.title": "Transformer Presets",
+  "mcoo_build_with_ease.shell.tools": "Tools",
+  "mcoo_build_with_ease.shell.details": "Tool Details",
+  "mcoo_build_with_ease.shell.preview_hint": "Build preview area",
+  "mcoo_build_with_ease.shell.section_build": "Build",
+  "mcoo_build_with_ease.shell.section_clipboard": "Clipboard",
+  "mcoo_build_with_ease.shell.section_settings": "Settings"
 }
