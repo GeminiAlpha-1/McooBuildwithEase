@@ -344,6 +344,8 @@ public final class McooBuildwithEaseClientManager implements ClientManager {
 
     public synchronized void onClientStart(Client client) {
         setRunningClient(client);
+        // 渲染模块的总开关 / 各模块开关 / 参数值，从配置里恢复
+        getEntrance().getRenderManager().applyConfig(getEntrance().getConfigStorage().get().renderConfig());
     }
 
     public void onClientTick(Client client, ClientTick.Phase phase) {
@@ -356,6 +358,9 @@ public final class McooBuildwithEaseClientManager implements ClientManager {
                 operationsRenderer.tick();
                 outlineRenderer.tick();
                 patternRenderer.tick();
+
+                // 渲染模块的每 tick 回调（异常由宿主兜住，坏一个模块不影响别的）
+                getEntrance().getRenderManager().tick(1f / 20f);
             }
             case END -> {
             }
@@ -368,11 +373,13 @@ public final class McooBuildwithEaseClientManager implements ClientManager {
         }
 
         getTooltipRenderer().renderGuiOverlay(renderer, deltaTick);
+        getEntrance().getRenderManager().renderGui(deltaTick);
     }
 
     public void onRenderEnd(Renderer renderer, float deltaTick) {
         patternRenderer.render(renderer, deltaTick);
         outlineRenderer.render(renderer, deltaTick);
         operationsRenderer.render(renderer, deltaTick);
+        getEntrance().getRenderManager().renderWorld(deltaTick);
     }
 }
