@@ -147,6 +147,31 @@ Five files are new and belong to this project alone:
   * `api/export/StructureExporter.java`
   * `api/renderer/PreviewBlock.java`
   * `api/renderer/PreviewCamera.java`
+
+The render layer was reworked on top of that: a small module framework was added
+under `api/render/`, because the upstream `RenderStateShard` model cannot be
+expressed on Minecraft 26.2 (see the bullet above). These files are new and
+belong to this project alone:
+
+  * `api/render/RenderModule.java` — the SPI: one module is one independently
+    switchable feature, discovered through `@AutoService`.
+  * `api/render/RenderParameter.java` — a parameter *declaration* (key, type,
+    range, default). It does not hold a value.
+  * `api/render/RenderParameterRegistry.java` — the single place where
+    parameter values live: declaration, validation, persistence, snapshot.
+  * `api/render/RenderPipelineSpec.java` — a Minecraft-independent description
+    of a render pipeline (depth test, blending, culling, shader set). The
+    platform layer translates it into the concrete version's pipeline.
+  * `api/render/RenderModuleContext.java` — the capability boundary of a
+    module: it can read its own parameters, request its own pipelines and log,
+    and nothing else.
+  * `api/render/RenderModuleContextFactory.java` — the only seam between the
+    API layer and the platform layer.
+  * `api/render/RenderModuleHost.java` — the host: discovery, isolation,
+    switches, scheduling. Every lifecycle callback of every module is guarded
+    individually, so a failing module disables only itself.
+  * `api/render/ParameterType.java`, `api/render/RenderModuleCategory.java`,
+    `api/render/RenderPipelineHandle.java`, `api/render/PlatformHandle.java`.
   * `api/renderer/VanillaLayer.java`
   * `api/renderer/RenderLayerFactory.java`
 
