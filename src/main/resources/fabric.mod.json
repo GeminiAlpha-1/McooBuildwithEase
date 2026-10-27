@@ -23,7 +23,8 @@
         ]
     },
     "mixins": [
-        "mcoo_build_with_ease.mixins.json"
+        "mcoo_build_with_ease.mixins.json",
+        "fabric_gui_imgui.mixins.json"
     ],
     "accessWidener": "mcoo_build_with_ease.classtweaker",
     "depends": {

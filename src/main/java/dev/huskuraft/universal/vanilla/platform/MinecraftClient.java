@@ -65,6 +65,18 @@ public record MinecraftClient(
             refs.gui.setScreen(minecraftScreen.refs());
             return;
         }
+        // ImGui 界面：走 ImGui 宿主（fabric-gui-imgui 的 mixin 会接管这个界面的绘制）。
+        // ⚠️ MinecraftImGuiProxyScreen 引用了 ImGui 库的类 —— 没装库时**不能**加载它，
+        //    所以这个判断必须放在 new 之前，类型判断也不能用 instanceof 去碰那个类。
+        if (screen instanceof dev.huskuraft.universal.api.gui.ImGuiScreen imguiScreen) {
+            if (!dev.huskuraft.universal.api.gui.ImGuiSupport.isAvailable()) {
+                org.slf4j.LoggerFactory.getLogger(MinecraftClient.class)
+                        .warn("[gui] 需要安装 fabric-gui-imgui 才能使用这个界面");
+                return;
+            }
+            refs.gui.setScreen(new dev.huskuraft.universal.vanilla.gui.MinecraftImGuiProxyScreen(imguiScreen));
+            return;
+        }
         refs.gui.setScreen(new MinecraftProxyScreen(screen));
 
     }

@@ -56,6 +56,14 @@ repositories {
 		name = 'Central Mirror'
 		url = 'https://maven.aliyun.com/repository/public'
 	}
+	// ImGui 库（fabric-gui-imgui）只发在 Modrinth，用它的 Maven 仓库取编译期依赖。
+	maven {
+		name = 'Modrinth'
+		url = 'https://api.modrinth.com/maven'
+		content {
+			includeGroup 'maven.modrinth'
+		}
+	}
 }
 
 configurations.all {
@@ -67,6 +75,59 @@ configurations.all {
 		// 统一到 0.5.5 —— 只影响 dev 运行，生产环境由玩家的 Fabric API 提供。
 		force 'io.github.llamalad7:mixinextras-fabric:0.5.5'
 	}
+}
+
+// ------------------------------------------------------------------
+// ImGui：把 fabric-gui-imgui 的内容并进我们的 jar（做法参照 Axiom）
+//
+//   * 它的类（cn/enaium/**，含 4 个 mixin）直接进我们的 jar
+//   * 它自带的 META-INF/jars/*.jar（imgui-java 绑定 + 各平台 native）作为我们的 JiJ 条目
+//   * 它的 4 个 mixin 合并进我们自己的 mixins 配置的 **client 段**
+//     → 专用服务器是瘦服务端（jar 里没有 net.minecraft.client.* 类），
+//       而 client 段的 mixin 服务端根本不加载 → 服务端零影响。
+//       这正是 Axiom 用同一个包（environment: "*"）还能跑服务端的关键。
+// ------------------------------------------------------------------
+configurations {
+	imguiBundle
+}
+
+dependencies {
+	imguiBundle 'maven.modrinth:fabric-gui-imgui:26.2-1.2.0+imgui.1.92.7.1'
+}
+
+// 从 ImGui 库里抽出宿主类（cn/enaium/**，含 4 个 mixin）。
+// ⚠️ 它的着色器资源（assets/fabric-gui-imgui/shaders/core/imgui.{vsh,fsh}）不在这里抽 ——
+//    而是直接 vendor 进了 src/main/resources（dev 客户端只认那个目录，抽到 build/ 里取不到）。
+tasks.register('extractImguiClasses', Copy) {
+	from zipTree(configurations.imguiBundle.singleFile)
+	into "$buildDir/imgui/classes"
+	include 'cn/enaium/**'
+	// include/exclude 过滤器不算 Gradle 的任务输入 → 改了过滤条件它也不会重跑。强制每次重跑。
+	outputs.upToDateWhen { false }
+}
+
+// ② 它自带的嵌套 jar（imgui-java 绑定 + LWJGL3 后端 + 各平台 native）先抽出来
+tasks.register('extractImguiNested', Copy) {
+	from zipTree(configurations.imguiBundle.singleFile)
+	into "$buildDir/imgui/nested"
+	include 'META-INF/jars/**'
+	eachFile { details ->
+		// imgui-java-binding-1.92.7.1.jar → imgui-java-binding.jar（版本升级不用改 fabric.mod.json）
+		details.path = details.path.replaceFirst(/-[\d.]+\.jar$/, '.jar')
+	}
+}
+
+// ③ 再把它们的**内容**解包进我们的 jar —— 不走 JiJ（做法参照 Axiom）：
+//    native 直接放回原路径（io/imgui/java/native-bin/**），imgui-java 自己从 classpath 加载；
+//    顺带去掉它们各自的 fabric.mod.json（它们是库，不是模组，别在模组列表里变成幽灵条目）。
+tasks.register('extractImguiJava', Copy) {
+	dependsOn 'extractImguiNested'
+	from {
+		fileTree("$buildDir/imgui/nested/META-INF/jars").files.collect { zipTree(it) }
+	}
+	into "$buildDir/imgui/java"
+	exclude 'fabric.mod.json'
+	exclude 'META-INF/**'
 }
 
 dependencies {
@@ -94,6 +155,26 @@ dependencies {
 	compileOnly 'io.netty:netty-all:4.1.109.Final'
 	compileOnly 'org.slf4j:slf4j-api:2.0.13'
 	compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+
+	// ------------------------------------------------------------------
+	// ImGui（编译期依赖）
+	//   fabric-gui-imgui  —— 26.2 的 ImGui 宿主（MIT），提供 ImGuiService 与渲染后端
+	//   imgui-java-binding —— Dear ImGui 的 Java 绑定（MIT），提供 imgui.ImGui 控件 API
+	// 编译期用 compileOnly；运行期的类由上面的 extractImgui* 任务打进我们的 jar。
+	// ------------------------------------------------------------------
+	compileOnly 'maven.modrinth:fabric-gui-imgui:26.2-1.2.0+imgui.1.92.7.1'
+	compileOnly 'io.github.spair:imgui-java-binding:1.92.7.1'
+
+	// dev 客户端走 classpath 而不是 jar，所以 ImGui 宿主类也要进开发期运行时
+	runtimeOnly files("$buildDir/imgui/classes").builtBy('extractImguiClasses')
+
+	// dev 客户端走 classpath 而不是 jar，所以 imgui-java 那几个 jar 也要进开发期运行时
+	// （正式包里它们的内容已经解包进我们的 jar，native 在 io/imgui/java/native-bin/ 下）
+	runtimeOnly 'io.github.spair:imgui-java-binding:1.92.7.1'
+	runtimeOnly 'io.github.spair:imgui-java-lwjgl3:1.92.7.1'
+	runtimeOnly 'io.github.spair:imgui-java-natives-windows:1.92.7.1'
+	runtimeOnly 'io.github.spair:imgui-java-natives-linux:1.92.7.1'
+	runtimeOnly 'io.github.spair:imgui-java-natives-macos:1.92.7.1'
 }
 
 processResources {
@@ -102,6 +183,13 @@ processResources {
 	filesMatching("fabric.mod.json") {
 		expand "version": project.version
 	}
+}
+
+// 把 ImGui 的宿主类与 imgui-java 运行时一起打进我们的 jar（单包，服务端客户端通用）
+tasks.withType(Jar).configureEach {
+	dependsOn 'extractImguiClasses', 'extractImguiJava'
+	from("$buildDir/imgui/classes")
+	from("$buildDir/imgui/java")
 }
 
 // 许可证随 jar 一起分发：LGPL v3 要求分发时附带许可证副本，

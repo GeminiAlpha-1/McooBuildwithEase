@@ -48,6 +48,29 @@ proprietary additions layered on top of them. The upstream package name
 every vendored file stays unambiguous.
 
 
+Vendored third-party libraries
+==============================
+
+The user interface of this mod is built with Dear ImGui, which is bundled into
+the jar (the same way Axiom does it) so that a single jar works on both the
+client and a dedicated server.
+
+  * Dear ImGui — https://github.com/ocornut/imgui — MIT License
+    Copyright (c) 2017-2024 Omar Cornut
+  * imgui-java — https://github.com/SpaiR/imgui-java — MIT License
+    Copyright (c) 2021 SpaiR / Hysen Labs
+    (the Java binding of Dear ImGui; provides the `imgui.*` classes)
+  * fabric-gui-imgui — https://github.com/Enaium/fabric-mod-ImGui — MIT License
+    Copyright (c) Enaium
+    (the Minecraft 26.2 host for Dear ImGui: provides the `ImGuiService` and
+    renders ImGui's draw data into the game's render pass)
+
+All three are redistributed unmodified, with their license notices intact, as
+part of this jar. Their classes live under `imgui/`, `io/imgui/` and
+`cn/enaium/` respectively, and the native libraries for Linux, macOS and
+Windows are under `io/imgui/java/native-bin/`.
+
+
 Changes made in this port
 ==========================
 

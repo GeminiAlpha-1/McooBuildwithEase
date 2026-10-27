@@ -4,6 +4,7 @@ import com.mcoo.buildwithease.screen.builer.McooBuildwithEaseBuilderSettingsScre
 import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseClipboardScreen;
 import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseSaveFileScreen;
 import com.mcoo.buildwithease.screen.general.McooBuildwithEaseGeneralSettingsScreen;
+import com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseRenderSettingsImGuiScreen;
 import com.mcoo.buildwithease.screen.pattern.McooBuildwithEasePatternScreen;
 import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSessionStatusScreen;
 import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSettingsScreen;
@@ -69,6 +70,8 @@ final class McooBuildwithEaseDebug {
             }
             switch (screen) {
                 case "settings" -> new McooBuildwithEaseSettingsScreen(entrance).attach();
+                // ImGui 版渲染设置（13 个模块 / 58 个参数）—— 用来无人值守截图核对
+                case "render" -> new McooBuildwithEaseRenderSettingsImGuiScreen(entrance).attach();
                 case "builder" -> new McooBuildwithEaseBuilderSettingsScreen(entrance).attach();
                 case "clipboard" -> new McooBuildwithEaseClipboardScreen(entrance).attach();
                 case "radial" -> new McooBuildwithEaseStructureScreen(entrance, McooBuildwithEaseKeys.BUILD_MODE_RADIAL.getKeyBinding()).attach();

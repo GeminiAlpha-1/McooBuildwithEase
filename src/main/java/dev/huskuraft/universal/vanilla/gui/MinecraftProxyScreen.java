@@ -11,7 +11,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
-public final class MinecraftProxyScreen extends net.minecraft.client.gui.screens.Screen {
+public class MinecraftProxyScreen extends net.minecraft.client.gui.screens.Screen {
 
     private final Screen proxy;
 

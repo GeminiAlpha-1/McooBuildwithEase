@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "priority": 1100,
+  "package": "cn.enaium.fabric.imgui.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "GameRendererMixin",
+    "MinecraftMixin",
+    "GlDeviceMixin",
+    "GpuDeviceMixin"
+  ]
+}
