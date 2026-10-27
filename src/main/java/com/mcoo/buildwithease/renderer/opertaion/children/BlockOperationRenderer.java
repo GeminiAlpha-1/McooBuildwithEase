@@ -5,7 +5,6 @@ import java.util.List;
 
 import dev.huskuraft.universal.api.renderer.Renderer;
 import com.mcoo.buildwithease.building.operation.block.BlockOperationResult;
-import com.mcoo.buildwithease.renderer.opertaion.BlockRenderLayers;
 import com.mcoo.buildwithease.renderer.opertaion.OperationsRenderer;
 
 public class BlockOperationRenderer implements OperationRenderer {
@@ -126,13 +125,14 @@ public class BlockOperationRenderer implements OperationRenderer {
         renderer.pushPose();
         renderer.translate(blockPosition.toVector3d().sub(camera));
         if (blockEntity != null) {
-            renderer.renderBlockEntity(BlockRenderLayers.block(color.getRGB()), world, blockPosition, blockEntity);
+            renderer.renderBlockEntity(world, blockPosition, blockEntity);
         }
 
         if (blockState != null) {
             renderer.translate((scale - 1) / -2f, (scale - 1) / -2f, (scale - 1) / -2f);
             renderer.scale(scale, scale, scale);
-            renderer.renderBlockState(BlockRenderLayers.block(color.getRGB()), world, blockPosition, blockState);
+            // 染色走顶点色：26.2 的方块模型由原版挑管线，没有自选渲染层 / 自定义着色器的口子。
+            renderer.renderBlockState(world, blockPosition, blockState, color.getRGB());
         }
 
         renderer.popPose();

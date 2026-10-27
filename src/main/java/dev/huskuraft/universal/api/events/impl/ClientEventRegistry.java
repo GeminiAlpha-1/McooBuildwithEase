@@ -6,7 +6,6 @@ import dev.huskuraft.universal.api.events.input.KeyInput;
 import dev.huskuraft.universal.api.events.input.RegisterKeys;
 import dev.huskuraft.universal.api.events.lifecycle.ClientStart;
 import dev.huskuraft.universal.api.events.lifecycle.ClientTick;
-import dev.huskuraft.universal.api.events.render.RegisterShader;
 import dev.huskuraft.universal.api.events.render.RenderGui;
 import dev.huskuraft.universal.api.events.render.RenderWorld;
 
@@ -37,10 +36,6 @@ public class ClientEventRegistry extends EventRegistry {
     }
 
     public Event<RenderWorld> getRenderWorldEvent() {
-        return get();
-    }
-
-    public Event<RegisterShader> getRegisterShaderEvent() {
         return get();
     }
 

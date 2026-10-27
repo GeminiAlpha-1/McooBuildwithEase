@@ -397,7 +397,7 @@ public class MinecraftRenderer extends Renderer {
     }
 
     @Override
-    public void renderBlockState(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockState blockState) {
+    public void renderBlockState(World world, BlockPosition blockPosition, BlockState blockState, int color) {
         if (collector == null) {
             // GUI 侧画不了 3D 方块预览
             return;
@@ -412,11 +412,18 @@ public class MinecraftRenderer extends Renderer {
         // 之前这里又叠了一次「方块绝对位置」，净位移变成 2×方块位置 - 相机：
         // 世界坐标越大偏得越远（近原点看不出来），方块预览就飞到几千格外去了。
         // 参考原版 26.2：LevelRenderer#submitBlockEntities 也是「调用方先平移，再 submit」。
-        renderState.submit(poseStack, collector, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        //
+        // 【染色】submit 的最后一个参数就是顶点色（ARGB，一路传到
+        // SubmitNodeCollector#submitBlockModel）。26.2 的方块模型由原版自己挑管线，
+        // 没有自选渲染层的口子，所以建造结果的配色只能从这里走 ——
+        // 上游 1.21.3 靠自带的 rendertype_tinted_solid 着色器 + TintColor uniform，
+        // 26.2 没有那个着色器了，之前的移植把颜色写死成 0xFFFFFFFF（纯白），
+        // 结果是「成功 / 失败 / 复制」三种配色在方块预览上完全看不出来。
+        renderState.submit(poseStack, collector, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, color);
     }
 
     @Override
-    public void renderBlockEntity(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockEntity blockEntity) {
+    public void renderBlockEntity(World world, BlockPosition blockPosition, BlockEntity blockEntity) {
         if (collector == null) {
             return;
         }

@@ -1,44 +1,26 @@
 package com.mcoo.buildwithease.renderer.opertaion;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import dev.huskuraft.universal.api.renderer.RenderLayer;
-import dev.huskuraft.universal.api.renderer.RenderLayers;
-import dev.huskuraft.universal.api.renderer.VertexFormats;
-import dev.huskuraft.universal.api.renderer.programs.RenderState;
-import com.mcoo.buildwithease.renderer.BlockShaders;
+import dev.huskuraft.universal.api.renderer.VanillaLayer;
 
-public abstract class BlockRenderLayers extends RenderLayers {
+/**
+ * 建造相关的渲染层。
+ * <p>
+ * 26.2 的 {@code RenderType} 没法自建（{@code RenderType.create} 是包内可见），
+ * 所以这里挑的都是 vanilla 现成的管线。
+ */
+public abstract class BlockRenderLayers {
 
-    // TODO: 16/1/24 use func
-    public static final RenderLayer EF_PLANES = RenderLayer.createComposite("ef_planes",
-            VertexFormats.POSITION_COLOR,
-            VertexFormats.Modes.QUADS,
-            256,
-            RenderState.builder()
-                    .setLineState(RenderLayers.NO_WIDTH)
-                    .setShaderState(RenderLayers.POSITION_COLOR_SHADER_STATE)
-                    .setLayeringState(RenderLayers.VIEW_OFFSET_Z_LAYERING)
-                    .setTransparencyState(RenderLayers.TRANSLUCENT_TRANSPARENCY)
-                    .setWriteMaskState(RenderLayers.COLOR_WRITE)
-                    .setCullState(RenderLayers.NO_CULL)
-                    .create(false));
-    protected static final Map<String, RenderLayer> BLOCK_RENDER_TYPES = new HashMap<>();
-    protected static final RenderState.ShaderState TINTED_SOLID_SHADER = RenderState.ShaderState.create("tinted_solid_shader", BlockShaders.TINTED_OUTLINE);
-    protected static final RenderLayer EF_LINES = RenderLayer.createComposite("ef_lines",
-            VertexFormats.POSITION_COLOR_NORMAL,
-            VertexFormats.Modes.DEBUG_LINES,
-            256,
-            RenderState.builder()
-                    .setLineState(RenderLayers.NO_WIDTH)
-                    .setShaderState(RenderLayers.LINES_SHADER_STATE)
-                    .setLayeringState(RenderLayers.VIEW_OFFSET_Z_LAYERING)
-                    .setTransparencyState(RenderLayers.TRANSLUCENT_TRANSPARENCY)
-                    .setOutputState(RenderLayers.ITEM_ENTITY_TARGET)
-                    .setWriteMaskState(RenderLayers.COLOR_DEPTH_WRITE)
-                    .setCullState(RenderLayers.NO_CULL)
-                    .create(false));
+    /**
+     * 变换器的半透明面（纯顶点色）。
+     * <p>
+     * 上游 1.21.3 用的是「视图 Z 偏移 + 半透明 + 不写深度」的自定义合成层，
+     * 26.2 的 vanilla 管线没有这些自由组合的口子，这里退到纯色填充管线。
+     */
+    public static final RenderLayer EF_PLANES = RenderLayer.vanilla(VanillaLayer.DEBUG_FILLED_BOX);
+
+    /** 调试线框（半透明）。 */
+    public static final RenderLayer EF_LINES = RenderLayer.vanilla(VanillaLayer.LINES_TRANSLUCENT);
 
     public static RenderLayer lines() {
         return EF_LINES;
@@ -48,24 +30,4 @@ public abstract class BlockRenderLayers extends RenderLayers {
         return EF_PLANES;
     }
 
-    public static RenderLayer block(int color) {
-        return BLOCK_RENDER_TYPES.computeIfAbsent(Integer.toString(color), k -> {
-            var texture = RenderState.TexturingState.create("block_texturing_" + k, () -> {
-                var colorUniform = BlockShaders.TINTED_OUTLINE.getUniform("TintColor");
-                if (colorUniform != null) {
-                    colorUniform.set((color >> 16 & 255) / 255f, (color >> 8 & 255) / 255f, (color & 255) / 255f, (color >>> 24) / 255f);
-                }
-            }, () -> {
-            });
-            var renderState = RenderState.builder()
-                    .setShaderState(TINTED_SOLID_SHADER)
-                    .setTexturingState(texture)
-                    .setTransparencyState(RenderLayers.TRANSLUCENT_TRANSPARENCY)
-                    .setTextureState(RenderLayers.BLOCK_SHEET_MIPPED_TEXTURE)
-                    .setLightmapState(RenderLayers.LIGHTMAP)
-                    .setCullState(RenderLayers.NO_CULL)
-                    .create(false);
-            return RenderLayer.createComposite("ef_block_previews_" + k, VertexFormats.BLOCK, VertexFormats.Modes.QUADS, 2097152, true, false, renderState);
-        });
-    }
 }

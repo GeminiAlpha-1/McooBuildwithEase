@@ -508,9 +508,22 @@ public abstract class Renderer {
     public void exportModelPreview(PreviewRenderRequest request, int width, int height, java.nio.file.Path file) {
     }
 
-    public abstract void renderBlockState(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockState blockState);
+    /**
+     * 画一个方块模型。
+     * <p>
+     * 26.2 的方块模型由原版自己挑管线（{@code BlockModelRenderState#submit}），
+     * 没有「自选渲染层」的口子，所以染色只能走顶点色。
+     *
+     * @param color 顶点色（ARGB）
+     */
+    public abstract void renderBlockState(World world, BlockPosition blockPosition, BlockState blockState, int color);
 
-    public abstract void renderBlockEntity(RenderLayer renderLayer, World world, BlockPosition blockPosition, BlockEntity blockEntity);
+    /**
+     * 画一个方块实体。
+     * <p>
+     * 方块实体的渲染器自带颜色，原版没有统一的染色入口，所以这里不带颜色参数。
+     */
+    public abstract void renderBlockEntity(World world, BlockPosition blockPosition, BlockEntity blockEntity);
 
     private static class ScissorStack {
 

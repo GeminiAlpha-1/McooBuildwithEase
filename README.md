@@ -121,7 +121,8 @@
 ## 兼容性
 
 - 目标版本为 Minecraft 26.2。
-- 渲染使用 vanilla 管线与顶点色，不含自定义着色器，OpenGL 与 Vulkan 两种图形后端表现一致。
+- 渲染只使用 vanilla 渲染层与顶点色，不含自定义着色器，OpenGL 与 Vulkan 两种图形后端表现一致。
+  因此与 Iris / Sodium 等接管渲染管线的模组不会冲突（未装光影实测，细节观感可能与原版不同）。
 - 与 WorldEdit、Axiom、Syncmatica 等服务端模组共存；跨世界搬运结构建议使用这些模组。
 
 ## 许可

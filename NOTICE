@@ -60,6 +60,15 @@ so the platform adapters were rewritten rather than patched:
     `RenderStateShard`, `MultiBufferSource`, `ShaderInstance` and `GuiGraphics`
     no longer exist. The custom shader pipeline was dropped entirely, in line
     with the upstream project's own configuration.
+  * The render layer abstraction was reworked. Upstream describes a render
+    layer as a free combination of `RenderStateShard` components, but in 26.2
+    the vanilla `RenderType` factory is package-private, so a third-party mod
+    can only reuse the entries that already exist in `RenderTypes` — and those
+    have their depth test, culling, blending and output target fixed. The
+    upstream-shaped API could therefore only ever be an approximation, so it
+    was replaced by an explicit `VanillaLayer` enumeration, and the shader
+    registration mechanism (which had no implementation and could not work
+    without `CoreShaders`, a class that no longer exists) was removed.
   * The custom radial build-mode menu was replaced by a grid of buttons.
   * Client entry points now use the Fabric API lifecycle events instead of
     mixin-based bootstrapping. One mixin remains, for client-side input
@@ -77,8 +86,7 @@ On top of the port, this project adds:
   * A three-dimensional clipboard preview rendered from real block models,
     with mouse-driven rotation, panning and zooming.
 
-The upstream `common-api` files were modified in five places. All changes are
-additive or corrective, and none of them changes an existing method signature:
+The upstream `common-api` files were modified in ten places:
 
   * `api/renderer/Renderer.java`
     Added `renderModelPreview`, and reworked scissor handling: Minecraft 26.2
@@ -86,6 +94,10 @@ additive or corrective, and none of them changes an existing method signature:
     one-to-one with the platform. The upstream implementation re-pushed the
     parent rectangle on pop, which made the platform's stack grow without
     bound and clipped everything after the first list entry.
+    `renderBlockState` and `renderBlockEntity` no longer take a render layer:
+    in 26.2 the block model picks its own pipeline, so a layer could not be
+    honoured. `renderBlockState` now takes a vertex colour instead, which is
+    how a block preview is tinted.
   * `api/gui/AbstractContainerWidget.java`
     Right-button drags are now forwarded, not just left-button drags, so that
     a widget can offer a distinct interaction per mouse button.
@@ -99,12 +111,44 @@ additive or corrective, and none of them changes an existing method signature:
     `findPlugin` returns an empty `Optional` when no plugin implementation is
     present, instead of throwing `NoSuchElementException` and taking the
     client down with it.
+  * `api/renderer/RenderLayer.java`
+    Render layers are now created from a `VanillaLayer` enumeration instead of
+    from a free combination of render state components.
+  * `api/renderer/RenderLayers.java`
+    Reduced to the GUI layers actually in use. The `org.lwjgl.opengl.GL11`
+    depth-compare constants are gone, so the API layer no longer depends on
+    an OpenGL binding at all.
+  * `api/renderer/VertexFormats.java`
+    Points at the renamed render layer factory.
+  * `api/events/impl/ClientEventRegistry.java`
+    The shader registration event was removed, together with its interface.
+  * `api/renderer/RenderStateFactory.java`
+    Renamed to `RenderLayerFactory` and reduced to the render layer creation
+    and the vertex format lookups.
 
-Three files are new and belong to this project alone:
+Seven upstream files were removed, because the mechanism they described cannot
+work on Minecraft 26.2 and no code path used them:
+
+  * `api/renderer/Shader.java`
+  * `api/renderer/LazyShader.java`
+  * `api/renderer/Shaders.java`
+  * `api/renderer/Uniform.java`
+  * `api/renderer/programs/RenderState.java`
+  * `api/renderer/programs/CompositeRenderState.java`
+  * `api/events/render/RegisterShader.java`
+
+The corresponding platform adapters were removed as well
+(`vanilla/renderer/MinecraftShader.java`, `vanilla/renderer/MinecraftUniform.java`),
+and `vanilla/renderer/MinecraftRenderStateFactory.java` was replaced by
+`vanilla/renderer/MinecraftRenderLayerFactory.java`.
+
+Five files are new and belong to this project alone:
 
   * `api/export/StructureExporter.java`
   * `api/renderer/PreviewBlock.java`
   * `api/renderer/PreviewCamera.java`
+  * `api/renderer/VanillaLayer.java`
+  * `api/renderer/RenderLayerFactory.java`
 
 
 Source code

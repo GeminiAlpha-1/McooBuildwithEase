@@ -10,7 +10,6 @@ import dev.huskuraft.universal.api.core.Player;
 import dev.huskuraft.universal.api.events.EventResult;
 import dev.huskuraft.universal.api.events.input.KeyRegistry;
 import dev.huskuraft.universal.api.events.lifecycle.ClientTick;
-import dev.huskuraft.universal.api.events.render.RegisterShader;
 import dev.huskuraft.universal.api.gui.Screen;
 import dev.huskuraft.universal.api.input.InputKey;
 import dev.huskuraft.universal.api.input.Keys;
@@ -19,11 +18,9 @@ import dev.huskuraft.universal.api.platform.Client;
 import dev.huskuraft.universal.api.platform.ClientManager;
 import dev.huskuraft.universal.api.platform.Platform;
 import dev.huskuraft.universal.api.renderer.Renderer;
-import dev.huskuraft.universal.api.renderer.Shaders;
 import dev.huskuraft.universal.api.text.ChatFormatting;
 import dev.huskuraft.universal.api.text.Text;
 import com.mcoo.buildwithease.building.clipboard.SnapshotTransform;
-import com.mcoo.buildwithease.renderer.BlockShaders;
 import com.mcoo.buildwithease.renderer.opertaion.OperationsRenderer;
 import com.mcoo.buildwithease.renderer.outliner.OutlineRenderer;
 import com.mcoo.buildwithease.renderer.pattern.PatternRenderer;
@@ -66,8 +63,6 @@ public final class McooBuildwithEaseClientManager implements ClientManager {
 
         getEntrance().getEventRegistry().getRenderGuiEvent().register(this::onRenderGui);
         getEntrance().getEventRegistry().getRenderWorldEvent().register(this::onRenderEnd);
-
-        getEntrance().getEventRegistry().getRegisterShaderEvent().register(this::onRegisterShader);
     }
 
     private McooBuildwithEaseClient getEntrance() {
@@ -379,12 +374,5 @@ public final class McooBuildwithEaseClientManager implements ClientManager {
         patternRenderer.render(renderer, deltaTick);
         outlineRenderer.render(renderer, deltaTick);
         operationsRenderer.render(renderer, deltaTick);
-    }
-
-    public void onRegisterShader(RegisterShader.ShadersSink sink) {
-        BlockShaders.TINTED_OUTLINE.register(sink);
-        for (var value : Shaders.values()) {
-            value.register(sink);
-        }
     }
 }
