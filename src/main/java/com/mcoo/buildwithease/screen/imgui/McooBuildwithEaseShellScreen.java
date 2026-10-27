@@ -7,6 +7,7 @@ import com.mcoo.buildwithease.McooBuildwithEaseClient;
 import com.mcoo.buildwithease.screen.common.McooBuildwithEaseScreen;
 import com.mcoo.buildwithease.screen.imgui.panel.ClipboardPanel;
 import com.mcoo.buildwithease.screen.imgui.panel.ImGuiPanel;
+import com.mcoo.buildwithease.screen.imgui.panel.PatternPanel;
 import com.mcoo.buildwithease.screen.imgui.panel.RenderSettingsPanel;
 import com.mcoo.buildwithease.screen.imgui.widget.ImGuiShell;
 import com.mcoo.buildwithease.screen.imgui.widget.ImGuiWidgets;
@@ -48,6 +49,7 @@ public class McooBuildwithEaseShellScreen extends McooBuildwithEaseScreen implem
     private List<ImGuiPanel> buildPanels() {
         List<ImGuiPanel> list = new ArrayList<>();
         list.add(new ClipboardPanel(getEntrance()));
+        list.add(new PatternPanel(getEntrance()));
         list.add(new RenderSettingsPanel(getEntrance()));
         return list;
     }

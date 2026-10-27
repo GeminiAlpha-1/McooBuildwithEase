@@ -666,5 +666,9 @@
   "mcoo_build_with_ease.clipboard.rendering": "Rendering preview…",
   "mcoo_build_with_ease.clipboard.slider_yaw": "Yaw",
   "mcoo_build_with_ease.clipboard.slider_pitch": "Pitch",
-  "mcoo_build_with_ease.clipboard.slider_zoom": "Zoom"
+  "mcoo_build_with_ease.clipboard.slider_zoom": "Zoom",
+  "mcoo_build_with_ease.pattern.detail_type": "Type",
+  "mcoo_build_with_ease.pattern.detail_name": "Name",
+  "mcoo_build_with_ease.pattern.detail_valid": "Valid",
+  "mcoo_build_with_ease.pattern.detail_multiplier": "Volume"
 }

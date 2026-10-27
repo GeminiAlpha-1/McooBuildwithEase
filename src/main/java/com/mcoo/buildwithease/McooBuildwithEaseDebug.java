@@ -78,6 +78,16 @@ final class McooBuildwithEaseDebug {
                 case "shell" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance).attach();
                 case "render" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "render").attach();
                 case "clip" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "clipboard").attach();
+                case "patternimgui" -> {
+                    // 播种一份带默认变换器的图案：不然图案栈永远是空的，看不到列表长什么样
+                    var debugPlayer = entrance.getClient().getPlayer();
+                    if (debugPlayer != null) {
+                        entrance.getStructureBuilder().setPattern(debugPlayer,
+                                new com.mcoo.buildwithease.building.pattern.Pattern(
+                                        true, com.mcoo.buildwithease.building.pattern.Transformer.getDefaultTransformers()));
+                    }
+                    new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "pattern").attach();
+                }
                 // 纹理喂入 spike：验证 ImGui 里能不能画 MC 的方块/物品图标
                 case "texspike" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseTextureSpikeScreen(entrance).attach();
                 case "builder" -> new McooBuildwithEaseBuilderSettingsScreen(entrance).attach();
