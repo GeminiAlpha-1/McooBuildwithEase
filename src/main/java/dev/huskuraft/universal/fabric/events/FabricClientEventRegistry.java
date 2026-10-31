@@ -38,6 +38,9 @@ public class FabricClientEventRegistry extends ClientEventRegistry {
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             getClientTickEvent().invoker().onClientTick(new MinecraftClient(minecraft), ClientTick.Phase.END);
             // 「导出图片」的回读要提交命令编码器，必须在帧外做（帧内提交会让 Vulkan 掉设备）。
+            // 物品图标图集的烘焙不在这里：它和原版 GuiItemAtlas / Axiom 一样，要放在
+            // **GUI 提取阶段**（下面的 HUD 元素里）—— 那里没有活动 pass，且 RenderSystem 的
+            // 投影/模型视图栈是 GUI 上下文，烘出来的图标才在正确位置（tick 里烘会吃到上一帧残留矩阵）。
             var exportRenderer = dev.huskuraft.universal.vanilla.renderer.preview.PreviewExportRenderer.get();
             if (exportRenderer != null) {
                 exportRenderer.readBackIfReady();
@@ -63,6 +66,18 @@ public class FabricClientEventRegistry extends ClientEventRegistry {
 
         // HUD 渲染：26.2 取消了 GuiMixin 的做法，官方提供 HudElementRegistry
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("mcoo_build_with_ease", "hud"), (graphics, deltaTracker) -> {
+            // 物品图标烘焙：放在 GUI 提取阶段的最前面 —— 与 26.2 原版 GuiItemAtlas#drawToSlot
+            // 和 Axiom 的 BlockRenderCache.renderTick 同一时机（没有活动 RenderPass）。
+            // 这里只「立即绘制」到离屏图集，不往 GUI 渲染状态里加元素，所以不会影响后面的 onRenderGui。
+            var iconAtlas = dev.huskuraft.universal.vanilla.gui.McooItemIconAtlas.ensure();
+            if (iconAtlas != null) {
+                try {
+                    iconAtlas.flush();
+                } catch (Throwable error) {
+                    // 图标烘不出来不该拖累整个 HUD
+                    dev.huskuraft.universal.vanilla.gui.McooItemIconAtlas.reportFailure(error);
+                }
+            }
             getRenderGuiEvent().invoker().onRenderGui(MinecraftRenderer.forGui(graphics), deltaTracker.getGameTimeDeltaPartialTick(false));
         });
 

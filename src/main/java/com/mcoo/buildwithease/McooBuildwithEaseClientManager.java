@@ -25,9 +25,6 @@ import com.mcoo.buildwithease.renderer.opertaion.OperationsRenderer;
 import com.mcoo.buildwithease.renderer.outliner.OutlineRenderer;
 import com.mcoo.buildwithease.renderer.pattern.PatternRenderer;
 import com.mcoo.buildwithease.renderer.tooltip.TooltipRenderer;
-import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseClipboardScreen;
-import com.mcoo.buildwithease.screen.pattern.McooBuildwithEasePatternScreen;
-import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSettingsScreen;
 import com.mcoo.buildwithease.screen.structure.McooBuildwithEaseStructureScreen;
 import com.mcoo.buildwithease.screen.test.McooBuildwithEaseTestScreen;
 
@@ -179,7 +176,7 @@ public final class McooBuildwithEaseClientManager implements ClientManager {
         }
         if (McooBuildwithEaseKeys.SETTINGS.getKeyBinding().consumeClick()) {
             getEntrance().getClient().getSoundManager().playButtonClickSound();
-            new McooBuildwithEaseSettingsScreen(getEntrance()).attach();
+            new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "settings").attach();
         }
         McooBuildwithEaseDebug.openScreenIfRequested(this);
         if (McooBuildwithEaseKeys.TOGGLE_CLIPBOARD.getKeyBinding().consumeClick()) {
@@ -296,12 +293,12 @@ public final class McooBuildwithEaseClientManager implements ClientManager {
 
         if (McooBuildwithEaseKeys.EDIT_CLIPBOARD.getKeyBinding().consumeClick()) {
             getEntrance().getClient().getSoundManager().playButtonClickSound();
-            new McooBuildwithEaseClipboardScreen(getEntrance()).attach();
+            new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "clipboard").attach();
         }
 
         if (McooBuildwithEaseKeys.EDIT_PATTERN.getKeyBinding().consumeClick()) {
             getEntrance().getClient().getSoundManager().playButtonClickSound();
-            new McooBuildwithEasePatternScreen(getEntrance()).attach();
+            new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "pattern").attach();
         }
 
 //        if (McooBuildwithEaseKeys.EDIT_REPLACE.getKeyBinding().consumeClick()) {

@@ -1,14 +1,6 @@
 package com.mcoo.buildwithease;
 
-import com.mcoo.buildwithease.screen.builer.McooBuildwithEaseBuilderSettingsScreen;
-import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseClipboardScreen;
-import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseSaveFileScreen;
-import com.mcoo.buildwithease.screen.general.McooBuildwithEaseGeneralSettingsScreen;
-import com.mcoo.buildwithease.screen.pattern.McooBuildwithEasePatternScreen;
-import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSessionStatusScreen;
-import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSettingsScreen;
 import com.mcoo.buildwithease.screen.structure.McooBuildwithEaseStructureScreen;
-import com.mcoo.buildwithease.screen.transformer.McooBuildwithEaseTransformerPresetsSelectScreen;
 
 /**
  * 调试辅助：用一个系统属性让客户端自动打开指定界面，方便无人值守地截图核对 GUI。
@@ -58,48 +50,64 @@ final class McooBuildwithEaseDebug {
                     opened = true;
                     return;
                 }
-                var clipboardScreen = new McooBuildwithEaseClipboardScreen(entrance);
-                clipboardScreen.attach();
-                // 「导出图片」场景：等预览先渲染几帧（渲染器这时才拿到），再自动导一次
-                if ("clipboard-export".equals(screen)) {
-                    clipboardScreen.getSnapshotWidget().requestExport(1024, 683);
-                } else if ("clipboard-export4k".equals(screen)) {
-                    clipboardScreen.getSnapshotWidget().requestExport(4096, 2731);
+                // 导出图片场景：不经界面，直接把快照交给导出渲染器
+                // （预览渲染器只在帧内拿得到；和 ClipboardPanel#exportImage 走同一条路）
+                if ("clipboard-export".equals(screen) || "clipboard-export4k".equals(screen)) {
+                    boolean big = "clipboard-export4k".equals(screen);
+                    int width = big ? 4096 : 1024;
+                    int height = big ? 2731 : 683;
+                    var renderer = dev.huskuraft.universal.vanilla.renderer.preview.PreviewExportRenderer.get();
+                    if (renderer != null) {
+                        var blocks = com.mcoo.buildwithease.screen.clipboard.PreviewSource
+                                .blocksOf(clipboard.snapshot());
+                        var camera = new com.mcoo.buildwithease.screen.clipboard.PreviewCameraModel();
+                        var directory = dev.huskuraft.universal.api.platform.Platform.getInstance()
+                                .getGameDir().resolve("mcoo_build_with_ease_exports");
+                        renderer.request(blocks, camera.camera(), camera.orientation(),
+                                width, height, directory.resolve("debug-export.png"));
+                    }
                 } else if ("clipboard-history".equals(screen)) {
-                    // 快照历史专项测试：把这份快照塞进历史，然后直接打开历史列表
+                    // 快照历史专项测试：把这份快照塞进历史，面板里会显示
                     entrance.getConfigStorage().update(config -> config
                             .withClipboardConfig(config.clipboardConfig().appendHistory(clipboard.snapshot())));
-                    new com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseStructureSnapshotsHistoryScreen(
-                            entrance, snapshot -> {
-                    }).attach();
                 }
+                new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "clipboard").attach();
                 opened = true;
                 return;
             }
             switch (screen) {
-                case "settings" -> new McooBuildwithEaseSettingsScreen(entrance).attach();
+                case "settings" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "settings").attach();
                 // ImGui Shell（三栏：左导航 / 中内容 / 右详情）。render = 直接定位到渲染设置面板
                 case "shell" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance).attach();
                 case "render" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "render").attach();
                 case "clip" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "clipboard").attach();
                 case "playerimgui" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "players").attach();
                 case "builderimgui" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "builder").attach();
-                case "patternimgui" -> {
+                case "patternimgui", "patternimgui-items", "patternimgui-items-solid" -> {
+                    // -items 变体：多设一个开关，进界面后直接落在物品选择页（免脚本点按钮）
+                    com.mcoo.buildwithease.screen.imgui.panel.PatternPanel.DEBUG_START_PICKING =
+                            "patternimgui-items".equals(screen) || "patternimgui-items-solid".equals(screen);
+                    // -solid 变体：图集只清洋红不画物品，二分「写没写进去」
+                    dev.huskuraft.universal.vanilla.gui.McooItemIconAtlas.DEBUG_SOLID =
+                            "patternimgui-items-solid".equals(screen);
                     // 播种一份带默认变换器的图案：不然图案栈永远是空的，看不到列表长什么样
                     var debugPlayer = entrance.getClient().getPlayer();
                     if (debugPlayer != null) {
+                        // 物品随机器放第一个：默认选中它，右栏直接就是物品概率表（便于验证物品选择页）
+                        var seed = new java.util.ArrayList<com.mcoo.buildwithease.building.pattern.Transformer>();
+                        seed.add(com.mcoo.buildwithease.building.pattern.randomize.ItemRandomizer.RANDOM_INVENTORY);
+                        seed.addAll(com.mcoo.buildwithease.building.pattern.Transformer.getDefaultTransformers());
                         entrance.getStructureBuilder().setPattern(debugPlayer,
-                                new com.mcoo.buildwithease.building.pattern.Pattern(
-                                        true, com.mcoo.buildwithease.building.pattern.Transformer.getDefaultTransformers()));
+                                new com.mcoo.buildwithease.building.pattern.Pattern(true, seed));
                     }
                     new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "pattern").attach();
                 }
                 // 纹理喂入 spike：验证 ImGui 里能不能画 MC 的方块/物品图标
                 case "texspike" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseTextureSpikeScreen(entrance).attach();
-                case "builder" -> new McooBuildwithEaseBuilderSettingsScreen(entrance).attach();
-                case "clipboard" -> new McooBuildwithEaseClipboardScreen(entrance).attach();
+                case "builder" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "builder").attach();
+                case "clipboard" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "clipboard").attach();
                 case "radial" -> new McooBuildwithEaseStructureScreen(entrance, McooBuildwithEaseKeys.BUILD_MODE_RADIAL.getKeyBinding()).attach();
-                case "general" -> new McooBuildwithEaseGeneralSettingsScreen(entrance).attach();
+                case "general" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "settings").attach();
                 case "pattern" -> {
                     // 图案默认是禁用的，禁用时只显示「启用/完成」两个按钮；
                     // 这里先打开，才能看到转换器列表和添加/编辑/删除那套 UI。
@@ -109,15 +117,13 @@ final class McooBuildwithEaseDebug {
                     if (!pattern.enabled()) {
                         builder.setPattern(player, pattern.toggled());
                     }
-                    new McooBuildwithEasePatternScreen(entrance).attach();
+                    new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "pattern").attach();
                 }
-                case "presets" -> new McooBuildwithEaseTransformerPresetsSelectScreen(entrance, transformer -> {
-                }).attach();
-                case "session" -> new McooBuildwithEaseSessionStatusScreen(entrance).attach();
-                case "savefile" -> new McooBuildwithEaseSaveFileScreen(entrance,
-                        dev.huskuraft.universal.api.export.StructureExporter.Format.LITEMATIC,
-                        "mcoo-test-structure.litematic",
-                        3, 2, 3, java.util.List.of()).attach();
+                case "presets" -> {
+                    com.mcoo.buildwithease.screen.imgui.panel.PatternPanel.DEBUG_START_PRESET = true;
+                    new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "pattern").attach();
+                }
+                case "session" -> new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(entrance, "players").attach();
                 default -> McooBuildwithEase.LOGGER.warn("Unknown debug screen: {}", screen);
             }
             opened = true;

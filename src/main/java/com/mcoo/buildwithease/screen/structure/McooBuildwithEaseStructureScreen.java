@@ -24,9 +24,6 @@ import com.mcoo.buildwithease.building.settings.Misc;
 import com.mcoo.buildwithease.building.structure.BuildFeature;
 import com.mcoo.buildwithease.building.structure.BuildMode;
 import com.mcoo.buildwithease.building.structure.builder.Structure;
-import com.mcoo.buildwithease.screen.clipboard.McooBuildwithEaseClipboardScreen;
-import com.mcoo.buildwithease.screen.pattern.McooBuildwithEasePatternScreen;
-import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSettingsScreen;
 import com.mcoo.buildwithease.screen.grid.AbstractGridScreen;
 
 public class McooBuildwithEaseStructureScreen extends AbstractGridScreen<Structure, Option> {
@@ -189,11 +186,11 @@ public class McooBuildwithEaseStructureScreen extends AbstractGridScreen<Structu
                 switch (misc) {
                     case SETTINGS -> {
                         detach();
-                        new McooBuildwithEaseSettingsScreen(getEntrance()).attach();
+                        new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "settings").attach();
                     }
                     case PATTERN -> {
                         detach();
-                        new McooBuildwithEasePatternScreen(getEntrance()).attach();
+                        new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "pattern").attach();
                     }
                     case GO_BACK -> {
                         setLeftButtons();
@@ -208,7 +205,7 @@ public class McooBuildwithEaseStructureScreen extends AbstractGridScreen<Structu
                 }
                 if (getEntrance().getStructureBuilder().checkPermission(getPlayer())) {
                     detach();
-                    new McooBuildwithEasePatternScreen(getEntrance()).attach();
+                    new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "pattern").attach();
                 }
                 return;
             }
@@ -219,7 +216,7 @@ public class McooBuildwithEaseStructureScreen extends AbstractGridScreen<Structu
                 }
                 if (getEntrance().getStructureBuilder().checkPermission(getPlayer())) {
                     detach();
-                    new McooBuildwithEaseClipboardScreen(getEntrance()).attach();
+                    new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "clipboard").attach();
                 }
                 return;
 

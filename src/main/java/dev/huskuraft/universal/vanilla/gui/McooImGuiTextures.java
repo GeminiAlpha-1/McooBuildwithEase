@@ -66,6 +66,69 @@ public final class McooImGuiTextures {
         return new float[]{sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1()};
     }
 
+    /**
+     * 物品图标的 UV：依次尝试 {@code <ns>:item/<path>}、{@code <ns>:block/<path>}。
+     *
+     * <p>物品贴图不一定在 {@code item/} 下 —— 方块类物品（石头、木板…）用的是方块贴图。
+     * 两边都试一遍是<b>唯一</b>稳的做法；拿「缺失精灵」当失败判定（画出来是紫黑棋盘格）。
+     *
+     * @param itemId 形如 {@code "minecraft:stone"}（{@code ResourceLocation#getString()}）
+     * @return {@code {u0, v0, u1, v1}}；两边都缺返回 {@code null}
+     */
+    public static float[] itemSpriteUv(String itemId) {
+        var id = parse(itemId);
+        if (id == null) {
+            return null;
+        }
+        // 物品贴图分两本图集：普通物品在 items 图集（item/<path>），
+        // 方块类物品在 blocks 图集（block/<path>）。两边都要查，否则一半图标是空的。
+        var itemsAtlas = atlas(TextureAtlas.LOCATION_ITEMS);
+        var uv = spriteUv(itemsAtlas, id, "item");
+        if (uv != null) {
+            return uv;
+        }
+        var blocksAtlas = blockAtlas();
+        uv = spriteUv(blocksAtlas, id, "block");
+        if (uv != null) {
+            return uv;
+        }
+        // 少数方块贴图在 items 图集里也有条目，最后再兜一次
+        return spriteUv(itemsAtlas, id, "block") != null
+                ? spriteUv(itemsAtlas, id, "block")
+                : spriteUv(blocksAtlas, id, "item");
+    }
+
+    /** 在某本图集里按 {@code <folder>/<path>} 找精灵；拿不到（含缺失精灵）返回 null。 */
+    private static float[] spriteUv(TextureAtlas atlas, Identifier namespaceAndPath, String folder) {
+        if (atlas == null) {
+            return null;
+        }
+        var spriteId = Identifier.fromNamespaceAndPath(namespaceAndPath.getNamespace(),
+                folder + "/" + namespaceAndPath.getPath());
+        var sprite = atlas.getSprite(spriteId);
+        if (sprite == null) {
+            return null;
+        }
+        var contents = sprite.contents();
+        var missing = atlas.missingSprite().contents();
+        if (contents == null || (missing != null && contents.name().equals(missing.name()))) {
+            return null;
+        }
+        return new float[]{sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1()};
+    }
+
+    /** 任意一张图集（按纹理路径取）。 */
+    private static TextureAtlas atlas(Identifier location) {
+        try {
+            var texture = Minecraft.getInstance().getTextureManager().getTexture(location);
+            return texture instanceof TextureAtlas textureAtlas ? textureAtlas : null;
+        } catch (Throwable error) {
+            lastError = "TextureManager(" + location + "): " + error.getClass().getSimpleName();
+            return null;
+        }
+    }
+
+
     /** 图集是否可用于绘制（图集在资源重载期间会短暂失效）。 */
     public static boolean isBlockAtlasReady() {
         return blockAtlasView() != null;

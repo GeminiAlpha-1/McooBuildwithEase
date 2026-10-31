@@ -43,6 +43,14 @@ public final class ClipboardPanel implements ImGuiPanel {
     /** 上次构建时的结构指纹 + 方块列表（结构没变就不重建）。 */
     private List<PreviewBlock> blocks;
     private int blocksFingerprint;
+    /** 最近一次结构导出的结果（路径或错误），显示在右栏。 */
+    private String exportStatus;
+    /** 结构文件导出：正在选目录（中间栏切成目录浏览器）。 */
+    private boolean exporting;
+    private dev.huskuraft.universal.api.export.StructureExporter.Format exportFormat;
+    private java.nio.file.Path exportDirectory;
+    private final imgui.type.ImString exportName = new imgui.type.ImString("structure", 64);
+    private final imgui.type.ImString newFolderName = new imgui.type.ImString("", 32);
 
     public ClipboardPanel(McooBuildwithEaseClient entrance) {
         this.entrance = entrance;
@@ -64,6 +72,10 @@ public final class ClipboardPanel implements ImGuiPanel {
 
     @Override
     public void renderContent() {
+        if (exporting) {
+            renderExportBrowser();
+            return;
+        }
         var blocks = blocks();
         if (blocks.isEmpty()) {
             ImGuiShell.contentPlaceholder("mcoo_build_with_ease.clipboard.empty");
@@ -126,6 +138,19 @@ public final class ClipboardPanel implements ImGuiPanel {
             ImGuiWidgets.separator();
         }
 
+        // 清空剪贴板（旧 ClipboardScreen 的 Clear 按钮）
+        if (clipboard != null && !clipboard.isEmpty()) {
+            if (ImGuiWidgets.button("mcoo_build_with_ease.button.clear")) {
+                var player = entrance.getClient().getPlayer();
+                if (player != null) {
+                    entrance.getStructureBuilder().setClipboard(player,
+                            clipboard.withSnapshot(com.mcoo.buildwithease.building.clipboard.Snapshot.EMPTY));
+                    blocks = null;
+                    blocksFingerprint = 0;
+                }
+            }
+            ImGuiWidgets.separator();
+        }
         // 滑条：拖动旋转不可能精确到 1°，微调一律走这里。
         // 也顺带兜住「鼠标拖动在某些机器上不跟手」的情况 —— 滑条是 ImGui 的标准控件，
         // 走的是和按钮同一套输入路径。
@@ -160,6 +185,21 @@ public final class ClipboardPanel implements ImGuiPanel {
         }
 
         ImGuiWidgets.separator();
+        ImGuiWidgets.text("mcoo_build_with_ease.clipboard.download.title");
+        if (ImGuiWidgets.button("mcoo_build_with_ease.clipboard.download.litematic")) {
+            beginExport(dev.huskuraft.universal.api.export.StructureExporter.Format.LITEMATIC);
+        }
+        if (ImGuiWidgets.button("mcoo_build_with_ease.clipboard.download.worldedit")) {
+            beginExport(dev.huskuraft.universal.api.export.StructureExporter.Format.WORLDEDIT);
+        }
+        if (ImGuiWidgets.button("mcoo_build_with_ease.clipboard.download.axiom")) {
+            beginExport(dev.huskuraft.universal.api.export.StructureExporter.Format.AXIOM);
+        }
+        if (exportStatus != null) {
+            ImGuiWidgets.diagnostic(exportStatus);
+        }
+
+        ImGuiWidgets.separator();
         ImGuiWidgets.text("mcoo_build_with_ease.clipboard.hint");
     }
 
@@ -191,10 +231,166 @@ public final class ClipboardPanel implements ImGuiPanel {
                 "mcoo_build_with_ease.clipboard.export_image.started", size + "×" + size));
     }
 
+    /** 一次导出所需的数据：方块（已转相对坐标）+ 结构尺寸。 */
+    private record ExportPayload(List<dev.huskuraft.universal.api.export.StructureExporter.Block> blocks,
+                                 int sizeX, int sizeY, int sizeZ) {
+    }
+
+    /** 把剪贴板转成导出数据；空剪贴板返回 null。 */
+    private ExportPayload payload() {
+        var snapshot = snapshot();
+        if (snapshot == null || snapshot.isEmpty()) {
+            return null;
+        }
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        var raw = new java.util.ArrayList<com.mcoo.buildwithease.building.clipboard.BlockData>();
+        for (var blockData : snapshot.blockData()) {
+            if (blockData.blockState() == null) {
+                continue;
+            }
+            raw.add(blockData);
+            var position = blockData.blockPosition();
+            minX = Math.min(minX, position.x());
+            minY = Math.min(minY, position.y());
+            minZ = Math.min(minZ, position.z());
+            maxX = Math.max(maxX, position.x());
+            maxY = Math.max(maxY, position.y());
+            maxZ = Math.max(maxZ, position.z());
+        }
+        if (raw.isEmpty()) {
+            return null;
+        }
+        // 导出器要的是「相对结构左下角」的坐标
+        final int baseX = minX, baseY = minY, baseZ = minZ;
+        var blocks = raw.stream()
+                .map(blockData -> {
+                    var position = blockData.blockPosition();
+                    return new dev.huskuraft.universal.api.export.StructureExporter.Block(
+                            position.x() - baseX, position.y() - baseY, position.z() - baseZ,
+                            blockData.blockState());
+                })
+                .toList();
+        return new ExportPayload(blocks, maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1);
+    }
+
+    /**
+     * 选好格式后进「游戏内目录浏览器」，起点是该格式的默认目录。
+     * <p>
+     * ⚠️ 导出<b>不能直接落盘</b>（`AGENTS.md` §10.3）：玩家要能把文件存到任意位置分享给别人。
+     * 旧流程是独立的 {@code SaveFileScreen}，这里把它收进面板中间栏，只列子目录 + 文件名输入框。
+     */
+    private void beginExport(dev.huskuraft.universal.api.export.StructureExporter.Format format) {
+        if (payload() == null) {
+            exportStatus = Text.translate("mcoo_build_with_ease.clipboard.empty").getString();
+            return;
+        }
+        try {
+            exportFormat = format;
+            exportDirectory = dev.huskuraft.universal.api.platform.PlatformLoader
+                    .getSingleton(dev.huskuraft.universal.api.export.StructureExporter.class)
+                    .defaultDirectory(format);
+            exportName.set("structure_" + java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")));
+            exportStatus = null;
+            exporting = true;
+        } catch (Throwable error) {
+            exportStatus = error.getClass().getSimpleName();
+        }
+    }
+
+    private void renderExportBrowser() {
+        ImGuiWidgets.text("mcoo_build_with_ease.clipboard.download.title");
+        ImGuiWidgets.diagnostic(exportDirectory == null ? "?" : exportDirectory.toString());
+        ImGuiWidgets.separator();
+
+        if (exportDirectory != null) {
+            var parent = exportDirectory.getParent();
+            if (parent != null) {
+                if (ImGuiShell.navItemRaw(Text.translate("mcoo_build_with_ease.button.parent_folder").getString(), false)) {
+                    exportDirectory = parent;
+                }
+            }
+            try (var stream = java.nio.file.Files.list(exportDirectory)) {
+                var directories = stream
+                        .filter(java.nio.file.Files::isDirectory)
+                        .sorted(java.util.Comparator.comparing(path -> path.getFileName().toString().toLowerCase(java.util.Locale.ROOT)))
+                        .limit(50)
+                        .toList();
+                for (var directory : directories) {
+                    if (ImGuiShell.navItemRaw(directory.getFileName().toString(), false)) {
+                        exportDirectory = directory;
+                    }
+                }
+            } catch (Throwable error) {
+                ImGuiWidgets.diagnostic(error.getClass().getSimpleName());
+            }
+
+            ImGuiWidgets.separator();
+            imgui.ImGui.setNextItemWidth(160f);
+            imgui.ImGui.inputText("##new_folder", newFolderName);
+            imgui.ImGui.sameLine();
+            if (ImGuiWidgets.button("mcoo_build_with_ease.button.new_folder")) {
+                String folder = newFolderName.get() == null ? "" : newFolderName.get().trim();
+                if (!folder.isEmpty()) {
+                    try {
+                        var created = exportDirectory.resolve(folder);
+                        java.nio.file.Files.createDirectories(created);
+                        exportDirectory = created;
+                        newFolderName.set("");
+                    } catch (Throwable error) {
+                        exportStatus = error.getClass().getSimpleName();
+                    }
+                }
+            }
+            if (ImGuiWidgets.button("mcoo_build_with_ease.clipboard.download.to_downloads")) {
+                var downloads = downloadsDirectory();
+                if (downloads != null) {
+                    exportDirectory = downloads;
+                }
+            }
+        }
+
+        ImGuiWidgets.separator();
+        ImGuiWidgets.text("mcoo_build_with_ease.clipboard.download.file_name");
+        imgui.ImGui.setNextItemWidth(-1f);
+        imgui.ImGui.inputText("##export_name", exportName);
+        if (ImGuiWidgets.button("mcoo_build_with_ease.button.save")) {
+            saveExport();
+        }
+        imgui.ImGui.sameLine();
+        if (ImGuiWidgets.button("mcoo_build_with_ease.button.cancel")) {
+            exporting = false;
+        }
+        if (exportStatus != null) {
+            ImGuiWidgets.diagnostic(exportStatus);
+        }
+    }
+
+    private void saveExport() {        var payload = payload();
+        if (payload == null || exportDirectory == null || exportFormat == null) {
+            return;
+        }
+        String name = exportName.get() == null ? "" : exportName.get().trim();
+        if (name.isEmpty()) {
+            name = "structure";
+        }
+        try {
+            var path = dev.huskuraft.universal.api.platform.PlatformLoader
+                    .getSingleton(dev.huskuraft.universal.api.export.StructureExporter.class)
+                    .export(exportDirectory, name, payload.sizeX(), payload.sizeY(), payload.sizeZ(),
+                            payload.blocks(), exportFormat);
+            exportStatus = path.toString();
+            exporting = false;
+        } catch (Throwable error) {
+            exportStatus = error.getClass().getSimpleName()
+                    + (error.getMessage() == null ? "" : ": " + error.getMessage());
+        }
+    }
+
     // ------------------------------------------------------------------
     // 原生预览（平台层用）
     // ------------------------------------------------------------------
-
     @Override
     public PreviewRenderRequest nativePreview() {
         var blocks = blocks();
@@ -288,6 +484,18 @@ public final class ClipboardPanel implements ImGuiPanel {
         }
         var clipboard = entrance.getStructureBuilder().getContext(player).clipboard();
         return clipboard == null ? null : clipboard.snapshot();
+    }
+
+    /** 系统「下载」目录；找不到返回 null（Windows/macOS 一般是 Downloads，个别本地化环境叫「下载」）。 */
+    private static java.nio.file.Path downloadsDirectory() {
+        var home = java.nio.file.Path.of(System.getProperty("user.home", "."));
+        for (var name : new String[]{"Downloads", "下载"}) {
+            var candidate = home.resolve(name);
+            if (java.nio.file.Files.isDirectory(candidate)) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
 }

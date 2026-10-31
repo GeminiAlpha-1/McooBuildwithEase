@@ -14,10 +14,6 @@ import com.mcoo.buildwithease.building.config.ClientConfig;
 import com.mcoo.buildwithease.building.config.ClipboardConfig;
 import com.mcoo.buildwithease.building.config.PatternConfig;
 import com.mcoo.buildwithease.building.config.RenderConfig;
-import com.mcoo.buildwithease.screen.general.McooBuildwithEaseGeneralSettingsScreen;
-import com.mcoo.buildwithease.screen.pattern.McooBuildwithEasePatternScreen;
-import com.mcoo.buildwithease.screen.player.McooBuildwithEaseOnlinePlayersScreen;
-import com.mcoo.buildwithease.screen.settings.McooBuildwithEaseSettingsScreen;
 
 public class McooBuildwithEaseTestScreen extends AbstractPanelScreen {
 
@@ -57,21 +53,16 @@ public class McooBuildwithEaseTestScreen extends AbstractPanelScreen {
             }));
         });
         entries.addSimpleEntry(entry -> {
-            entry.addWidget(new Button(getEntrance(), entry.getLeft(), entry.getTop(), entry.getWidth(), 20, Text.text("Open McooBuildwithEaseSettingsScreen"), button -> {
-                new McooBuildwithEaseSettingsScreen(getEntrance()).attach();
+            entry.addWidget(new Button(getEntrance(), entry.getLeft(), entry.getTop(), entry.getWidth(), 20, Text.text("Open ImGui Shell (settings)"), button -> {
+                new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "settings").attach();
             }));
-            entry.addWidget(new Button(getEntrance(), entry.getLeft(), entry.getTop() + 20, entry.getWidth(), 20, Text.text("Open McooBuildwithEaseConstraintSettingsScreen"), button -> {
-                new McooBuildwithEaseGeneralSettingsScreen(getEntrance()).attach();
-            }));
-            entry.addWidget(new Button(getEntrance(), entry.getLeft(), entry.getTop() + 80, entry.getWidth(), 20, Text.text("Open McooBuildwithEaseOnlinePlayersScreen"), button -> {
-                new McooBuildwithEaseOnlinePlayersScreen(getEntrance(), playerInfo -> {
-
-                }).attach();
+            entry.addWidget(new Button(getEntrance(), entry.getLeft(), entry.getTop() + 20, entry.getWidth(), 20, Text.text("Open ImGui Shell (players)"), button -> {
+                new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "players").attach();
             }));
         });
         entries.addSimpleEntry(entry -> {
-            entry.addWidget(new Button(getEntrance(), entry.getLeft(), entry.getTop(), entry.getWidth(), 20, Text.text("Open McooBuildwithEasePatternScreen"), button -> {
-                new McooBuildwithEasePatternScreen(getEntrance()).attach();
+            entry.addWidget(new Button(getEntrance(), entry.getLeft(), entry.getTop(), entry.getWidth(), 20, Text.text("Open ImGui Shell (pattern)"), button -> {
+                new com.mcoo.buildwithease.screen.imgui.McooBuildwithEaseShellScreen(getEntrance(), "pattern").attach();
             }));
         });
     }
