@@ -29,6 +29,20 @@
 
 建造操作由客户端计算结构并下发至服务端执行，因此服务端安装本模组是使用建造功能的前提。
 
+## 下载（正式版 / 测试版）
+
+本项目分两条互不影响的版本线，**都从 Releases 下载**：
+
+| 版本线 | 分支 | 标签 / 文件名 | 发行版标记 | 适合 |
+|---|---|---|---|---|
+| 正式版 | `master` | `26.<功能>.<修复>+26.2` | 普通 Release（非预发布） | 服务器 / 玩家日常使用 |
+| 测试版 | `dev` | `snapshot.<功能>.<修复>+26.2` | **Pre-release（预发布）** | 愿意帮忙测试新功能 / 联调的玩家 |
+
+- 正式版：[Releases 最新非预发布版本](https://github.com/GeminiAlpha-1/McooBuildwithEase/releases/latest)
+- 测试版：在 [Releases](https://github.com/GeminiAlpha-1/McooBuildwithEase/releases) 里找标着
+  **Pre-release**、版本号以 `snapshot.` 开头的条目。
+- ⚠️ **客户端和服务端必须装同一个 jar**（版本号不一致会连不上 / 会话无效）。
+
 ## 版本号
 
 格式为 `<年份>.<累计功能数>.<累计修复数>+<目标MC版本>`，例如 `26.3.5+26.2`：
